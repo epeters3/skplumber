@@ -1,5 +1,13 @@
 # skplumber
 
+## Basic Usage
+
+TODO
+
+## Package Opinions
+
+- A pipeline's final step must be the step that produces the pipeline's final output.
+
 ## Development Guide:
 
 1. For initial 1.0.0 release, this will be a python package that can take a pandas DF, a target column, and a problem type (i.e. classification, regression), and will build and try out ML pipelines on the data, delivering or storing the best pipeline as a useable model. It will use a common data preprocessing preamble, and try out different feature preprocessors and extractors, and different models as well.
