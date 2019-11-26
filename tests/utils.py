@@ -1,7 +1,6 @@
 from typing import Dict, Callable
 
 import pandas as pd
-import numpy as np
 from sklearn.datasets import load_iris, load_boston
 
 
