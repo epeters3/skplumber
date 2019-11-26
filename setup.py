@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="skplumber",
-    version="0.2dev",
-    packages=["skplumber"],
+    version="0.2.1dev",
+    packages=find_packages(include=["skplumber", "skplumber.*"]),
     license="MIT",
     url="https://github.com/epeters3/skplumber",
     author="Evan Peterson",
