@@ -1,28 +1,28 @@
 # skplumber
 
-## Basic Usage
+A package for automatically sampling, training, and scoring machine learning pipelines on classification or regression problems. The base constructs (pipelines, primitives, etc.) take heavily from the [Data Driven Discovery of Models (D3M)](https://docs.datadrivendiscovery.org/) core package.
 
-TODO
+## Getting Started
+
+### Installation
+
+```shell
+pip install skplumber
+```
+
+### Usage
+
+```python
+from skplumber import SKPlumber
+import pandas as pd
+
+X = pd.DataFrame({"feature": [1, 4, 5, 6, 3, 2, 4]})
+y = pd.Series({"class": [1, 0, 0, 1 ,1, 1, 0]})
+plumber = SKPlumber()
+best_pipeline, best_score = plumber.crank(X, y)
+print(f"The best test set score the model found was: {best_score})
+```
 
 ## Package Opinions
 
 - A pipeline's final step must be the step that produces the pipeline's final output.
-
-## Development Guide:
-
-1. For initial 1.0.0 release, this will be a python package that can take a pandas DF, a target column, and a problem type (i.e. classification, regression), and will build and try out ML pipelines on the data, delivering or storing the best pipeline as a useable model. It will use a common data preprocessing preamble, and try out different feature preprocessors and extractors, and different models as well.
-
-## Releasing
-
-1. Bump the version in `setup.py`
-1. Run:
-   ```shell
-   python setup.py sdist bdist_wheel
-   twine check dist/*
-   twine upload dist/*
-   ```
-1. Pip install the package to make sure the version was bumped:
-   ```shell
-   pip install skplumber
-   pip freeze | grep skplumber
-   ```
