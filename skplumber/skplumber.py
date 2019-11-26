@@ -1,10 +1,11 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 import pandas as pd
 
 from skplumber.consts import ProblemType
 from skplumber.samplers.sampler import PipelineSampler
 from skplumber.samplers.straight import StraightPipelineSampler
+from skplumber.pipeline import Pipeline
 from skplumber.primitives.primitive import Primitive
 from skplumber.primitives.sk_primitives.classifiers import classifier_primitives
 from skplumber.primitives.sk_primitives.regressors import regressor_primitives
@@ -28,7 +29,7 @@ class SKPlumber:
         sampler_name: str = "straight",
         test_size: Union[float, int] = 0.25,
         n: int = 10,
-    ):
+    ) -> Tuple[Pipeline, float]:
         """
         The main runtime method of the package. Give a dataset, problem type,
         and sampling strategy, it tries to find pipelines that give good
