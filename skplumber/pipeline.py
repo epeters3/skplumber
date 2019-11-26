@@ -1,10 +1,8 @@
-from typing import List, Type
+from typing import List, Type, Optional
 
 import pandas as pd
 
 from skplumber.primitives.primitive import Primitive
-from skplumber.consts import ProblemType
-from skplumber.metrics import score_output
 from skplumber.primitives.sk_primitives.preprocessing import MeanValueImputer
 
 
@@ -44,40 +42,54 @@ class Pipeline:
         step = PrimitiveStep(primitive_cls, inputs)
         self.steps.append(step)
 
+    def _run(
+        self, X: pd.DataFrame, y: Optional[pd.Series], *, fit: bool,
+    ) -> pd.DataFrame:
+        all_step_outputs: List[pd.DataFrame] = []
 
-def run_pipeline(
-    X: pd.DataFrame,
-    y: pd.Series,
-    pipeline: Pipeline,
-    *,
-    fit: bool,
-    problem_type: ProblemType,
-):
-    """
-    Runs a pipeline of primitive steps, finally scoring its output.
-    """
-    all_step_outputs: List[pd.DataFrame] = []
+        for step_i, step in enumerate(self.steps):
+            print(f"step {step_i}, {step.primitive.__class__.__name__}")
+            if step_i == 0:
+                step_inputs = X
+            else:
+                step_inputs = pd.concat(
+                    [all_step_outputs[i] for i in step.inputs], axis=1
+                )
+            if fit:
+                if y is None:
+                    raise ValueError("`y` cannot be `None` when fitting a pipeline")
+                step.primitive.fit(step_inputs, y)
+            step_outputs = step.primitive.produce(step_inputs)
+            if isinstance(step_outputs, pd.Series) and step_i < len(self.steps) - 1:
+                # Every step's output but the last step must be a dataframe, since it
+                # might be used as the `X` input for a future step.
+                step_outputs = pd.DataFrame({"output": step_outputs})
+            all_step_outputs.append(step_outputs)
 
-    for step_i, step in enumerate(pipeline.steps):
-        print(f"step {step_i}, {step.primitive.__class__.__name__}")
-        if step_i == 0:
-            step_inputs = X
-        else:
-            step_inputs = pd.concat([all_step_outputs[i] for i in step.inputs], axis=1)
-        if fit:
-            step.primitive.fit(step_inputs, y)
-        step_outputs = step.primitive.produce(step_inputs)
-        if isinstance(step_outputs, pd.Series) and step_i < len(pipeline.steps) - 1:
-            # Every step's output but the last step must be a dataframe, since it
-            # might be used as the `X` input for a future step.
-            step_outputs = pd.DataFrame({"output": step_outputs})
-        all_step_outputs.append(step_outputs)
+        final_predictions = all_step_outputs[-1]
+        if not isinstance(final_predictions, pd.Series):
+            raise ValueError(
+                f"final pipeline step {self.steps[-1].primitive} "
+                "did not output a pandas Series"
+            )
+        return final_predictions
 
-    final_predictions = all_step_outputs[-1]
-    if not isinstance(final_predictions, pd.Series):
-        raise ValueError(
-            f"final pipeline step {pipeline.steps[-1].primitive} "
-            "did not output a pandas Series"
-        )
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
+        """
+        Fits the pipeline on `X` and `y`, meaning, learns how to use `X`
+        to predict `y`.
+        
+        Parameters
+        ----------
+        X
+            The dataframe of features.
+        y
+            The series of targets to learn to predict.
+        """
+        self._run(X, y, fit=True)
 
-    return score_output(y, final_predictions, problem_type)
+    def predict(self, X: pd.DataFrame) -> pd.Series:
+        """
+        Makes a prediction for each instance in `X`, returning the predictions.
+        """
+        return self._run(X, None, fit=False)

@@ -5,9 +5,9 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from skplumber.primitives.primitive import Primitive
-from skplumber.pipeline import run_pipeline
 from skplumber.consts import ProblemType
 from skplumber.metrics import problems_to_metrics
+from skplumber.metrics import score_output
 
 
 class PipelineSampler(ABC):
@@ -54,21 +54,10 @@ class PipelineSampler(ABC):
         for i in range(num_samples):
             print(f"sampling pipeline {i}/{num_samples}")
             pipeline = self.sample_pipeline()
-            train_score = run_pipeline(
-                self.X_train,
-                self.y_train,
-                pipeline,
-                fit=True,
-                problem_type=self.problem_type,
-            )
-            test_score = run_pipeline(
-                self.X_test,
-                self.y_test,
-                pipeline,
-                fit=False,
-                problem_type=self.problem_type,
-            )
-            print(f"achieved train score: {train_score}, test score: {test_score}")
+            pipeline.fit(self.X_train, self.y_train)
+            test_predictions = pipeline.predict(self.X_test)
+            test_score = score_output(self.y_test, test_predictions, self.problem_type)
+            print(f"achieved test score: {test_score}")
             if i == 0:
                 self.best_pipeline = pipeline
                 self.best_score = test_score
