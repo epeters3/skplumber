@@ -15,11 +15,14 @@ pip install skplumber
 ```python
 from skplumber import SKPlumber
 import pandas as pd
+from sklearn.datasets import load_iris
 
-X = pd.DataFrame({"feature": [1, 4, 5, 6, 3, 2, 4]})
-y = pd.Series({"class": [1, 0, 0, 1, 1, 1, 0]})
+dataset = load_iris()
+X = pd.DataFrame(data=dataset["data"], columns=dataset["feature_names"])
+y = pd.Series(dataset["target"])
+
 plumber = SKPlumber()
-best_pipeline, best_score = plumber.crank(X, y)
+best_pipeline, best_score = plumber.crank(X, y, problem="classification")
 print(f"The best test set score the model found was: {best_score}")
 ```
 
