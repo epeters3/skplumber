@@ -17,10 +17,10 @@ from skplumber import SKPlumber
 import pandas as pd
 
 X = pd.DataFrame({"feature": [1, 4, 5, 6, 3, 2, 4]})
-y = pd.Series({"class": [1, 0, 0, 1 ,1, 1, 0]})
+y = pd.Series({"class": [1, 0, 0, 1, 1, 1, 0]})
 plumber = SKPlumber()
 best_pipeline, best_score = plumber.crank(X, y)
-print(f"The best test set score the model found was: {best_score})
+print(f"The best test set score the model found was: {best_score}")
 ```
 
 ## Package Opinions
