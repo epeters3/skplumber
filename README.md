@@ -29,3 +29,4 @@ print(f"The best test set score the model found was: {best_score}")
 ## Package Opinions
 
 - A pipeline's final step must be the step that produces the pipeline's final output.
+- All categorical columns (columns with non-numeric datatypes) will automatically be one-hot encoded.
