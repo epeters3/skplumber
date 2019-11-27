@@ -24,9 +24,12 @@ y = pd.Series(dataset["target"])
 plumber = SKPlumber()
 best_pipeline, best_score = plumber.crank(X, y, problem="classification")
 print(f"The best test set score the model found was: {best_score}")
+
+# To use the best pipeline on unseen data:
+predictions = best_pipeline.predict(unseen_X)
 ```
 
 ## Package Opinions
 
 - A pipeline's final step must be the step that produces the pipeline's final output.
-- All categorical columns (columns with non-numeric datatypes) will automatically be one-hot encoded.
+- All missing values are imputed

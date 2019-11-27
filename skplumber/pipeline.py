@@ -3,10 +3,7 @@ from typing import List, Type, Optional
 import pandas as pd
 
 from skplumber.primitives.primitive import Primitive
-from skplumber.primitives.sk_primitives.preprocessing import (
-    MeanValueImputer,
-    OneHotEncoder,
-)
+from skplumber.primitives.sk_primitives.preprocessing import MeanValueImputer
 
 
 class PrimitiveStep:
@@ -32,7 +29,6 @@ class Pipeline:
         """
         self.steps: List[PrimitiveStep] = []
         self.add_step(MeanValueImputer)
-        self.add_step(OneHotEncoder)
 
     def add_step(
         self, primitive_cls: Type[Primitive], inputs: List[int] = None
