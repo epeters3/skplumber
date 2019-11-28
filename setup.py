@@ -16,5 +16,6 @@ setup(
         "pandas>=0.25.3",
         "pytest>=5.2.4",
         "Cython==0.29.14",
+        "scipy>=1.3.2",
     ],
 )

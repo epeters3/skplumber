@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import pandas as pd
+import scipy as sp
 
 from skplumber.consts import ProblemType, PrimitiveType
 
@@ -67,6 +68,10 @@ def make_sklearn_primitive(sklearn_cls, primitive_type: PrimitiveType):
                 outputs = self.sk_primitive.transform(X)
 
             print(outputs.shape)
+
+            if sp.sparse.issparse(outputs):
+                outputs = outputs.todense()
+
             if len(outputs.shape) == 1:
                 # One column output
                 return pd.Series(outputs)
