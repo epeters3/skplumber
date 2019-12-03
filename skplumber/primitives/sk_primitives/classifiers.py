@@ -35,7 +35,8 @@ _classifiers = [
     ExtraTreeClassifier,
     DecisionTreeClassifier,
     MLPClassifier,
-    RadiusNeighborsClassifier,
+    # Radius hyperparam needs to be problem-specific to be useful
+    # RadiusNeighborsClassifier,
     KNeighborsClassifier,
     SGDClassifier,
     RidgeClassifierCV,
