@@ -19,6 +19,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import LogisticRegressionCV
+
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.neighbors import NearestCentroid
 from sklearn.svm import NuSVC
@@ -52,7 +53,8 @@ _classifiers = [
     LinearSVC,
     LogisticRegression,
     LogisticRegressionCV,
-    MultinomialNB,
+    # Can't handle negative data
+    # MultinomialNB,
     NearestCentroid,
     NuSVC,
     Perceptron,
