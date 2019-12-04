@@ -6,8 +6,7 @@ from sklearn.model_selection import train_test_split
 
 from skplumber.primitives.primitive import Primitive
 from skplumber.consts import ProblemType
-from skplumber.metrics import problems_to_metrics
-from skplumber.metrics import score_output
+from skplumber.metrics import Metric
 
 
 class PipelineSampler(ABC):
@@ -19,6 +18,7 @@ class PipelineSampler(ABC):
         models: List[Primitive],
         transformers: List[Primitive],
         problem_type: ProblemType,
+        metric: Metric,
         test_size: Union[float, int],
     ) -> None:
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
@@ -29,6 +29,7 @@ class PipelineSampler(ABC):
         self.models = models
         self.transfomers = transformers
         self.problem_type = problem_type
+        self.metric = metric
         self.best_score = None
         self.best_pipeline = None
 
@@ -49,20 +50,19 @@ class PipelineSampler(ABC):
         float
             The score of the best pipeline that was trained.
         """
-        problem_metric = problems_to_metrics[self.problem_type]
 
         for i in range(num_samples):
-            print(f"sampling pipeline {i}/{num_samples}")
+            print(f"sampling pipeline {i+1}/{num_samples}")
             pipeline = self.sample_pipeline()
             pipeline.fit(self.X_train, self.y_train)
             test_predictions = pipeline.predict(self.X_test)
-            test_score = score_output(self.y_test, test_predictions, self.problem_type)
+            test_score = self.metric(self.y_test, test_predictions)
             print(f"achieved test score: {test_score}")
             if i == 0:
                 self.best_pipeline = pipeline
                 self.best_score = test_score
             else:
-                if problem_metric.is_better_than(test_score, self.best_score):
+                if self.metric.is_better_than(test_score, self.best_score):
                     self.best_score = test_score
                     self.best_pipeline = pipeline
 

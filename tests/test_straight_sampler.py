@@ -8,9 +8,9 @@ class TestStraightSampler(TestCase):
     def test_can_sample_for_classification(self) -> None:
         plumber = SKPlumber()
         X, y = load_sk_dataset("iris")
-        plumber.crank(X, y, problem="classification", n=10)
+        plumber.crank(X, y, problem="classification", sampler="straight", n=3)
 
     def test_can_sample_for_regression(self) -> None:
         plumber = SKPlumber()
         X, y = load_sk_dataset("boston")
-        plumber.crank(X, y, problem="regression", n=10)
+        plumber.crank(X, y, problem="regression", sampler="straight", n=3)

@@ -5,11 +5,20 @@ import math
 import pandas as pd
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.metrics import f1_score
+from sklearn.metrics import accuracy_score
 
 from skplumber.consts import ProblemType
 
 
 class Metric(ABC):
+    @property
+    @abstractmethod
+    def problem_type(self) -> ProblemType:
+        """
+        The problem type this metric can be computed for.
+        """
+        pass
+
     @abstractmethod
     def __call__(self, y: pd.Series, predictions: pd.Series) -> float:
         """
@@ -30,6 +39,8 @@ class Metric(ABC):
 
 
 class RMSE(Metric):
+    problem_type = ProblemType.REGRESSION
+
     def __call__(self, y: pd.Series, predictions: pd.Series) -> float:
         return math.sqrt(mse(y, predictions))
 
@@ -38,6 +49,8 @@ class RMSE(Metric):
 
 
 class F1MACRO(Metric):
+    problem_type = ProblemType.CLASSIFICATION
+
     def __call__(self, y: pd.Series, predictions: pd.Series) -> float:
         return f1_score(y, predictions, average="macro")
 
@@ -45,27 +58,23 @@ class F1MACRO(Metric):
         return a > b
 
 
-problems_to_metrics: Dict[ProblemType, Metric] = {
-    ProblemType.REGRESSION: RMSE(),
-    ProblemType.CLASSIFICATION: F1MACRO(),
+class Accuracy(Metric):
+    problem_type = ProblemType.CLASSIFICATION
+
+    def __call__(self, y: pd.Series, predictions: pd.Series) -> float:
+        return accuracy_score(y, predictions)
+
+    def is_better_than(self, a: float, b: float) -> bool:
+        return a > b
+
+
+metrics: Dict[str, Metric] = {
+    "rmse": RMSE(),
+    "f1macro": F1MACRO(),
+    "accuracy": Accuracy(),
 }
 
-
-def score_output(
-    y: pd.Series, predictions: pd.Series, problem_type: ProblemType
-) -> float:
-    """
-    Scores the output of a pipeline.
-
-    Parameters
-    ----------
-    y
-        The vector of true target values.
-    predictions
-        A vector of predictions.
-    problem_type
-        The problem type the predictions are representing. Determines
-        which performance metric to use.
-    """
-
-    return problems_to_metrics[problem_type](y, predictions)
+default_metrics: Dict[ProblemType, Metric] = {
+    ProblemType.REGRESSION: RMSE(),
+    ProblemType.CLASSIFICATION: Accuracy(),
+}
