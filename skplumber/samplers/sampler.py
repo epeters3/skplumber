@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Union
+from typing import List, Union, Type
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -10,38 +10,21 @@ from skplumber.metrics import Metric
 
 
 class PipelineSampler(ABC):
-    def __init__(
+    def run(
         self,
         X: pd.DataFrame,
         y: pd.Series,
         *,
-        models: List[Primitive],
-        transformers: List[Primitive],
+        num_samples: int,
+        test_size: Union[int, float],
+        models: List[Type[Primitive]],
+        transformers: List[Type[Primitive]],
         problem_type: ProblemType,
         metric: Metric,
-        test_size: Union[float, int],
-    ) -> None:
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
-        self.X_train = X_train
-        self.X_test = X_test
-        self.y_train = y_train
-        self.y_test = y_test
-        self.models = models
-        self.transfomers = transformers
-        self.problem_type = problem_type
-        self.metric = metric
-        self.best_score = None
-        self.best_pipeline = None
-
-    def run(self, num_samples: int):
+    ):
         """
         Samples `num_samples` pipelines, returning the best one
         found along the way.
-
-        Parameters
-        ----------
-        num_samples
-            The number of pipelines to sample and evaluate.
         
         Returns
         -------
@@ -50,24 +33,29 @@ class PipelineSampler(ABC):
         float
             The score of the best pipeline that was trained.
         """
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
+        best_pipeline = None
+        best_score = None
 
         for i in range(num_samples):
             print(f"sampling pipeline {i+1}/{num_samples}")
-            pipeline = self.sample_pipeline()
-            pipeline.fit(self.X_train, self.y_train)
-            test_predictions = pipeline.predict(self.X_test)
-            test_score = self.metric(self.y_test, test_predictions)
+            pipeline = self.sample_pipeline(models, transformers)
+            pipeline.fit(X_train, y_train)
+            test_predictions = pipeline.predict(X_test)
+            test_score = metric(y_test, test_predictions)
             print(f"achieved test score: {test_score}")
             if i == 0:
-                self.best_pipeline = pipeline
-                self.best_score = test_score
+                best_pipeline = pipeline
+                best_score = test_score
             else:
-                if self.metric.is_better_than(test_score, self.best_score):
-                    self.best_score = test_score
-                    self.best_pipeline = pipeline
+                if metric.is_better_than(test_score, best_score):
+                    best_score = test_score
+                    best_pipeline = pipeline
 
-        return self.best_pipeline, self.best_score
+        return best_pipeline, best_score
 
     @abstractmethod
-    def sample_pipeline(self):
+    def sample_pipeline(
+        self, models: List[Type[Primitive]], transformers: List[Type[Primitive]],
+    ):
         pass

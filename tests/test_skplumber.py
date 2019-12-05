@@ -21,10 +21,6 @@ class TestSKPlumber(TestCase):
         with self.assertRaises(Exception):
             plumber.crank(X, y, problem="foobar")
 
-        # sampler strategy should be valid
-        with self.assertRaises(ValueError):
-            plumber.crank(X, y, problem="classification", sampler="foobar")
-
     def test_can_run(self) -> None:
         plumber = SKPlumber()
         X, y = load_sk_dataset("iris")

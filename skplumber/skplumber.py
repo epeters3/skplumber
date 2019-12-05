@@ -15,10 +15,7 @@ from skplumber.metrics import default_metrics, metrics
 
 class SKPlumber:
 
-    sampler_map: Dict[str, Type[PipelineSampler]] = {
-        "straight": StraightPipelineSampler
-    }
-    models_map: Dict[ProblemType, List[Primitive]] = {
+    models_map: Dict[ProblemType, List[Type[Primitive]]] = {
         ProblemType.CLASSIFICATION: classifier_primitives,
         ProblemType.REGRESSION: regressor_primitives,
     }
@@ -30,7 +27,7 @@ class SKPlumber:
         *,
         problem: str,
         metric: str = None,
-        sampler: str = "straight",
+        sampler: PipelineSampler = None,
         test_size: Union[float, int] = 0.25,
         n: int = 10,
     ) -> Tuple[Pipeline, float]:
@@ -55,9 +52,11 @@ class SKPlumber:
             See the keys of the `skplumber.metrics.metrics` dict for a list of
             valid options. If `None`, a default metric will be used.
         sampler
-            The name of the pipeline sampling strategy you wish to use on
-            the problem. See the keys of the `SKPlumber.sampler_map` dict
-            for a list of valid options.
+            An instance of a class inheriting from
+            `skplumber.samplers.sampler.PipelineSampler`. Used to decide what
+            types of pipelines to sample and try out on the problem. If `None`,
+            the `skplumber.samplers.straight.StraightPipelineSampler` will be
+            used with default arguments.
         test_size
             Used to determine the size of the test set. Passed as the
             `test_size` argument to `sklearn.model_selection.train_test_split`.
@@ -73,11 +72,6 @@ class SKPlumber:
         """
         problem_type = ProblemType(problem)
 
-        if sampler not in self.sampler_map:
-            raise ValueError(
-                f"invalid sampler {sampler}, "
-                f"must be one of {self.sampler_map.keys()}"
-            )
         valid_metric_names = [
             name
             for name, _metric in metrics.items()
@@ -93,17 +87,19 @@ class SKPlumber:
         if len(X.index) != y.size:
             raise ValueError(f"X and y must have the same number of instances")
 
-        sampler_cls = self.sampler_map[sampler]
-        _sampler = sampler_cls(
+        if sampler is None:
+            sampler = StraightPipelineSampler()
+
+        best_pipeline, best_score = sampler.run(
             X,
             y,
+            num_samples=n,
+            test_size=test_size,
             models=self.models_map[problem_type],
             transformers=transformer_primitives,
             problem_type=problem_type,
             metric=_metric,
-            test_size=test_size,
         )
-        best_pipeline, best_score = _sampler.run(n)
 
         print(f"found best test score of {best_score}")
         print("pipeline steps of best model:")
