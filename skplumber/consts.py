@@ -11,6 +11,7 @@ class ProblemType(Enum):
 
 
 class PrimitiveType(Enum):
-    TRANSFORMER = 1
-    REGRESSOR = 2
-    CLASSIFIER = 3
+    PREPROCESSOR = 1
+    TRANSFORMER = 2
+    REGRESSOR = 3
+    CLASSIFIER = 4

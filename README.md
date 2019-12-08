@@ -34,4 +34,5 @@ predictions = best_pipeline.predict(unseen_X)
 ## Package Opinions
 
 - A pipeline's final step must be the step that produces the pipeline's final output.
-- All missing values are imputed
+- All missing values are imputed.
+- All columns of type `object` and `category` are one hot encoded.
