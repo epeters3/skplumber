@@ -36,6 +36,10 @@ class OneHotEncoder(Primitive):
             self.onehot_col_names_to_vals[col_name] = top_n_vals
 
     def produce(self, X):
+        if len(self.onehot_col_names_to_vals) == 0:
+            # This dataset does not need one hot encoding
+            return X
+
         # Use pd.get_dummies() to do the encoding then only keep columns
         # who are found in the map created in `self.fit`.
         categoricals = X.select_dtypes(include=["object", "category"])

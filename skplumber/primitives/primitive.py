@@ -64,7 +64,10 @@ def make_sklearn_primitive(sklearn_cls, primitive_type: PrimitiveType):
                 PrimitiveType.CLASSIFIER,
             ]:
                 outputs = self.sk_primitive.predict(X)
-            elif self.primitive_type == PrimitiveType.TRANSFORMER:
+            elif self.primitive_type in [
+                PrimitiveType.TRANSFORMER,
+                PrimitiveType.PREPROCESSOR,
+            ]:
                 outputs = self.sk_primitive.transform(X)
 
             print(outputs.shape)

@@ -25,4 +25,4 @@ class TestStraightSampler(TestCase):
         best_pipeline, _ = plumber.crank(
             X, y, problem="regression", sampler=sampler, n=1
         )
-        self.assertEqual(len(best_pipeline.steps), 3)
+        self.assertEqual(len(best_pipeline.steps), 5)
