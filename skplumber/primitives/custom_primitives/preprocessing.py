@@ -59,3 +59,40 @@ class OneHotEncoder(Primitive):
                     result[onehot_col_name] = 0
 
         return result
+
+
+class RandomImputer(Primitive):
+    """
+    Imputes missing values for each column by randomly sampling
+    from the known values of that column. Has the benefit of
+    preserving the column's distribution.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(PrimitiveType.PREPROCESSOR)
+        self.col_names_to_known_vals: Dict[str, pd.Series] = {}
+
+    def fit(self, X, y) -> None:
+        for col in X:
+            # The index of a series returned by `pd.Series.value_counts`
+            # holds the values, and the actual entries of the series hold
+            # the proportions those values have in `X`.
+            self.col_names_to_known_vals[col] = X[col].value_counts(normalize=True)
+
+    def produce(self, X):
+        # Impute missing values using the known values found
+        # in `self.fit`.
+        result = X.copy()
+        for name, known_vals in self.col_names_to_known_vals.items():
+            # Fill all missing values with values sampled from the
+            # distribution observed for this column in the `self.fit`
+            # method.
+            result[name].fillna(
+                pd.Series(
+                    np.random.choice(
+                        known_vals.index, p=known_vals, size=len(result.index)
+                    )
+                ),
+                inplace=True,
+            )
+        return result
