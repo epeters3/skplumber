@@ -48,10 +48,14 @@ class OneHotEncoder(Primitive):
 
         for col_name, vals_to_onehot in self.onehot_col_names_to_vals.items():
             # get rid of the un-encoded column, then add the
-            # one-hot encoded ones.
+            # one-hot encoded ones, only adding the ones that
+            # were created in `self.fit`.
             result = result.drop(col_name, axis=1)
             for val in vals_to_onehot:
                 onehot_col_name = f"{col_name}_{val}"
-                result[onehot_col_name] = one_hotted[onehot_col_name]
+                if onehot_col_name in one_hotted.columns:
+                    result[onehot_col_name] = one_hotted[onehot_col_name]
+                else:
+                    result[onehot_col_name] = 0
 
         return result
