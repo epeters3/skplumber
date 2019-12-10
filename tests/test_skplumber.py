@@ -1,13 +1,13 @@
 from unittest import TestCase
 
-from tests.utils import load_sk_dataset
+from tests.utils import load_test_dataset
 from skplumber.skplumber import SKPlumber
 
 
 class TestSKPlumber(TestCase):
     def test_args_are_validated(self) -> None:
         plumber = SKPlumber()
-        X, y = load_sk_dataset("iris")
+        X, y = load_test_dataset("iris")
 
         # metric should be valid
         with self.assertRaises(ValueError):
@@ -23,7 +23,7 @@ class TestSKPlumber(TestCase):
 
     def test_can_run(self) -> None:
         plumber = SKPlumber()
-        X, y = load_sk_dataset("iris")
+        X, y = load_test_dataset("iris")
 
         # Should be able to run with the most basic configuration
         plumber.crank(X, y, problem="classification", n=1)
