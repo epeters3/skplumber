@@ -83,16 +83,18 @@ class RandomImputer(Primitive):
         # Impute missing values using the known values found
         # in `self.fit`.
         result = X.copy()
-        for name, known_vals in self.col_names_to_known_vals.items():
+        for col, known_vals in self.col_names_to_known_vals.items():
             # Fill all missing values with values sampled from the
             # distribution observed for this column in the `self.fit`
             # method.
-            result[name].fillna(
-                pd.Series(
-                    np.random.choice(
-                        known_vals.index, p=known_vals, size=len(result.index)
-                    )
-                ),
-                inplace=True,
+            fill_vals = pd.Series(
+                np.random.choice(known_vals.index, p=known_vals, size=len(result.index))
+            )
+            # The indices of fill_vals and result need to match so
+            # every NaN in result can have a companion value in
+            # `fill_vals` to be filled with.
+            fill_vals.index = result.index
+            result[col].fillna(
+                fill_vals, inplace=True,
             )
         return result
