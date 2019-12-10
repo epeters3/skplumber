@@ -1,7 +1,6 @@
 ## Releasing a New Version
 
 1. Bump the version in `setup.py`
-1. Commit bumped version and tag with version
 1. Run:
    ```shell
    bash release.sh
@@ -11,6 +10,7 @@
    pip install skplumber
    pip freeze | grep skplumber
    ```
+1. If successful, commit the bumped version and tag with version
 1. Run:
    ```shell
    git push origin <version_tag_name>
