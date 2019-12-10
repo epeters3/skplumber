@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="skplumber",
-    version="0.3.5dev",
+    version="0.3.6dev",
     packages=find_packages(include=["skplumber", "skplumber.*"]),
     license="MIT",
     url="https://github.com/epeters3/skplumber",
