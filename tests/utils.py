@@ -11,7 +11,7 @@ def sk_data_to_pd(dataset: dict) -> Tuple[pd.DataFrame, pd.Series]:
     return X, y
 
 
-def load_test_dataset(name: str) -> Tuple[pd.DataFrame, pd.Series]:
+def load_dataset_for_tests(name: str) -> Tuple[pd.DataFrame, pd.Series]:
     loaders: Dict[str, Callable] = {
         "iris": lambda: sk_data_to_pd(load_iris()),  # classification
         "boston": lambda: sk_data_to_pd(load_boston()),  # regression
