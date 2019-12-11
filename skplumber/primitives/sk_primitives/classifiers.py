@@ -4,7 +4,6 @@ from sklearn.neural_network.multilayer_perceptron import MLPClassifier
 from sklearn.neighbors.classification import RadiusNeighborsClassifier
 from sklearn.neighbors.classification import KNeighborsClassifier
 from sklearn.linear_model.stochastic_gradient import SGDClassifier
-from sklearn.linear_model.ridge import RidgeClassifierCV
 from sklearn.linear_model.ridge import RidgeClassifier
 from sklearn.linear_model.passive_aggressive import PassiveAggressiveClassifier
 from sklearn.gaussian_process.gpc import GaussianProcessClassifier
@@ -18,7 +17,6 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import LogisticRegressionCV
 
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.neighbors import NearestCentroid
@@ -39,7 +37,6 @@ _classifiers = [
     # RadiusNeighborsClassifier,
     KNeighborsClassifier,
     SGDClassifier,
-    RidgeClassifierCV,
     RidgeClassifier,
     PassiveAggressiveClassifier,
     GaussianProcessClassifier,
@@ -53,7 +50,6 @@ _classifiers = [
     LinearDiscriminantAnalysis,
     LinearSVC,
     LogisticRegression,
-    LogisticRegressionCV,
     # Can't handle negative data
     # MultinomialNB,
     NearestCentroid,
