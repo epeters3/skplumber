@@ -2,22 +2,28 @@ from sklearn.linear_model import (
     ARDRegression,
     BayesianRidge,
     ElasticNet,
-    ElasticNetCV,
     HuberRegressor,
     Lars,
-    LarsCV,
     Lasso,
-    LassoCV,
     LassoLars,
-    LassoLarsCV,
     LinearRegression,
     PassiveAggressiveRegressor,
     RANSACRegressor,
     Ridge,
-    RidgeCV,
     SGDRegressor,
     TheilSenRegressor,
 )
+from sklearn.ensemble import (
+    RandomForestRegressor,
+    ExtraTreesRegressor,
+    AdaBoostRegressor,
+    GradientBoostingRegressor,
+)
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.svm import SVR, LinearSVR
+from sklearn.kernel_ridge import KernelRidge
+from sklearn.neural_network import MLPRegressor
 
 from skplumber.primitives.primitive import make_sklearn_primitive
 from skplumber.consts import PrimitiveType
@@ -26,21 +32,26 @@ _regressors = [
     ARDRegression,
     BayesianRidge,
     ElasticNet,
-    ElasticNetCV,
     HuberRegressor,
     Lars,
-    LarsCV,
     Lasso,
-    LassoCV,
     LassoLars,
-    LassoLarsCV,
     LinearRegression,
     PassiveAggressiveRegressor,
     RANSACRegressor,
     Ridge,
-    RidgeCV,
     SGDRegressor,
     TheilSenRegressor,
+    RandomForestRegressor,
+    ExtraTreesRegressor,
+    AdaBoostRegressor,
+    GradientBoostingRegressor,
+    DecisionTreeRegressor,
+    KNeighborsRegressor,
+    SVR,
+    LinearSVR,
+    KernelRidge,
+    MLPRegressor,
 ]
 
 regressor_primitives = [
