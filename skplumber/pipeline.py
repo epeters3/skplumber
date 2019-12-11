@@ -52,7 +52,6 @@ class Pipeline:
         all_step_outputs: List[pd.DataFrame] = []
 
         for step_i, step in enumerate(self.steps):
-            print(f"step {step_i}, {step.primitive.__class__.__name__}")
             if step_i == 0:
                 step_inputs = X
             else:

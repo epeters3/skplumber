@@ -1,6 +1,7 @@
-from typing import Dict, List, Union, Tuple, Type
+from typing import Dict, List, Tuple, Type
 
 import pandas as pd
+from sklearn.utils import shuffle
 
 from skplumber.consts import ProblemType
 from skplumber.samplers.sampler import PipelineSampler
@@ -28,13 +29,13 @@ class SKPlumber:
         problem: str,
         metric: str = None,
         sampler: PipelineSampler = None,
-        test_size: Union[float, int] = 0.25,
+        n_splits: int = 3,
         n: int = 10,
     ) -> Tuple[Pipeline, float]:
         """
         The main runtime method of the package. Give a dataset, problem type,
-        and sampling strategy, it tries to find pipelines that give good
-        performance.
+        and sampling strategy, it tries to find, in a limited amount of time,
+        the best performing pipeline it can.
 
         Parameters
         ----------
@@ -57,9 +58,9 @@ class SKPlumber:
             types of pipelines to sample and try out on the problem. If `None`,
             the `skplumber.samplers.straight.StraightPipelineSampler` will be
             used with default arguments.
-        test_size
-            Used to determine the size of the test set. Passed as the
-            `test_size` argument to `sklearn.model_selection.train_test_split`.
+        n_splits
+            The number of folds to conduct when evaluating the performance via
+            cross validation of each sampled pipeine. 
         n
             The number of pipelines to try out on the problem.
         
@@ -94,7 +95,7 @@ class SKPlumber:
             X,
             y,
             num_samples=n,
-            test_size=test_size,
+            n_splits=n_splits,
             models=self.models_map[problem_type],
             transformers=transformer_primitives,
             problem_type=problem_type,
@@ -105,5 +106,11 @@ class SKPlumber:
         print("pipeline steps of best model:")
         for step in best_pipeline.steps:
             print(step.primitive.__class__.__name__)
+
+        # Now that we have the "best" model, train it on
+        # the full dataset so it can see as much of the
+        # dataset's distribution as possible in an effort
+        # to be more ready for the wild.
+        best_pipeline.fit(*shuffle(X, y))
 
         return best_pipeline, best_score

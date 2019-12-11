@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import List, Union, Type
+from typing import List, Type
 
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 
 from skplumber.primitives.primitive import Primitive
 from skplumber.consts import ProblemType
@@ -16,7 +16,7 @@ class PipelineSampler(ABC):
         y: pd.Series,
         *,
         num_samples: int,
-        test_size: Union[int, float],
+        n_splits: int,
         models: List[Type[Primitive]],
         transformers: List[Type[Primitive]],
         problem_type: ProblemType,
@@ -33,16 +33,27 @@ class PipelineSampler(ABC):
         float
             The score of the best pipeline that was trained.
         """
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
-        best_pipeline = None
-        best_score = None
+        cv = KFold(n_splits=n_splits, shuffle=True, random_state=0)
 
         for i in range(num_samples):
             print(f"sampling pipeline {i+1}/{num_samples}")
             pipeline = self.sample_pipeline(models, transformers)
-            pipeline.fit(X_train, y_train)
-            test_predictions = pipeline.predict(X_test)
-            test_score = metric(y_test, test_predictions)
+
+            # Perform cross validation of `n_splits` folds, calculating
+            # the average performance over the folds as this pipeline's
+            # performance.
+            scores = []
+            for train_index, test_index in cv.split(X):
+                X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+                y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+                pipeline.fit(X_train, y_train)
+                test_predictions = pipeline.predict(X_test)
+                fold_score = metric(y_test, test_predictions)
+                scores.append(fold_score)
+
+            test_score = sum(scores) / len(scores)
+
             print(f"achieved test score: {test_score}")
             if i == 0:
                 best_pipeline = pipeline
