@@ -37,7 +37,7 @@ class PipelineSampler(ABC):
 
         for i in range(num_samples):
             print(f"sampling pipeline {i+1}/{num_samples}")
-            pipeline = self.sample_pipeline(models, transformers)
+            pipeline = self.sample_pipeline(problem_type, models, transformers)
 
             # Perform cross validation of `n_splits` folds, calculating
             # the average performance over the folds as this pipeline's
@@ -67,6 +67,9 @@ class PipelineSampler(ABC):
 
     @abstractmethod
     def sample_pipeline(
-        self, models: List[Type[Primitive]], transformers: List[Type[Primitive]],
+        self,
+        problem_type: ProblemType,
+        models: List[Type[Primitive]],
+        transformers: List[Type[Primitive]],
     ):
         pass

@@ -34,6 +34,10 @@ class Pipeline:
         self.add_step(RandomImputer)
         self.add_step(OneHotEncoder)
 
+    @property
+    def curr_step_i(self) -> int:
+        return len(self.steps) - 1
+
     def add_step(
         self, primitive_cls: Type[Primitive], inputs: List[int] = None
     ) -> None:

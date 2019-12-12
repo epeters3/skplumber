@@ -4,6 +4,7 @@ from typing import List, Type
 from skplumber.primitives.primitive import Primitive
 from skplumber.samplers.sampler import PipelineSampler
 from skplumber.pipeline import Pipeline
+from skplumber.consts import ProblemType
 
 
 class StraightPipelineSampler(PipelineSampler):
@@ -11,7 +12,10 @@ class StraightPipelineSampler(PipelineSampler):
         self.preprocessors = preprocessors
 
     def sample_pipeline(
-        self, models: List[Type[Primitive]], transformers: List[Type[Primitive]],
+        self,
+        problem_type: ProblemType,
+        models: List[Type[Primitive]],
+        transformers: List[Type[Primitive]],
     ) -> Pipeline:
         pipeline = Pipeline()
         for _ in range(self.preprocessors):

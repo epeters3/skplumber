@@ -16,12 +16,13 @@ class OneHotEncoder(Primitive):
     https://github.com/usc-isi-i2/dsbox-primitives
     """
 
+    primitive_type = PrimitiveType.PREPROCESSOR
+
     # the max number of most common values to
     # one-hot encode for each column
     top_n = 10
 
     def __init__(self) -> None:
-        super().__init__(PrimitiveType.PREPROCESSOR)
         self.onehot_col_names_to_vals: Dict[str, pd.Series] = {}
 
     def fit(self, X, y) -> None:
@@ -68,8 +69,9 @@ class RandomImputer(Primitive):
     preserving the column's distribution.
     """
 
+    primitive_type = PrimitiveType.PREPROCESSOR
+
     def __init__(self) -> None:
-        super().__init__(PrimitiveType.PREPROCESSOR)
         self.col_names_to_known_vals: Dict[str, pd.Series] = {}
 
     def fit(self, X, y) -> None:

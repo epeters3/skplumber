@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 import pandas as pd
 import scipy as sp
@@ -12,17 +13,26 @@ class Primitive(ABC):
     skplumber framework.
     """
 
-    def __init__(self, primitive_type: PrimitiveType) -> None:
-        self.primitive_type = primitive_type
-        if primitive_type == PrimitiveType.REGRESSOR:
-            self.supported_problem_types = [ProblemType.REGRESSION]
-        elif primitive_type == PrimitiveType.CLASSIFIER:
-            self.supported_problem_types = [ProblemType.CLASSIFICATION]
-        elif primitive_type == PrimitiveType.TRANSFORMER:
-            self.supported_problem_types = [
+    @property
+    @abstractmethod
+    def primitive_type(self) -> PrimitiveType:
+        pass
+
+    @property
+    def supported_problem_types(self) -> List[ProblemType]:
+        if self.primitive_type == PrimitiveType.REGRESSOR:
+            return [ProblemType.REGRESSION]
+        elif self.primitive_type == PrimitiveType.CLASSIFIER:
+            return [ProblemType.CLASSIFICATION]
+        elif self.primitive_type == PrimitiveType.TRANSFORMER:
+            return [
                 ProblemType.REGRESSION,
                 ProblemType.CLASSIFICATION,
             ]
+        else:
+            raise ValueError(
+                f"class {self.__class__.__name__} has an invalid primitive type"
+            )
 
     @abstractmethod
     def fit(self, X, y) -> None:
@@ -33,15 +43,16 @@ class Primitive(ABC):
         pass
 
 
-def make_sklearn_primitive(sklearn_cls, primitive_type: PrimitiveType):
+def make_sklearn_primitive(sklearn_cls, prim_type: PrimitiveType):
     class SKPrimitive(Primitive):
         f"""
         An automatically generated `Primitive` implementing wrapper for the
         '{sklearn_cls.__name__}' class in the `sklearn` package.
         """
 
+        primitive_type = prim_type
+
         def __init__(self) -> None:
-            super().__init__(primitive_type)
             self.sk_primitive = sklearn_cls()
 
         def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
