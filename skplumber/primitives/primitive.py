@@ -43,17 +43,18 @@ class Primitive(ABC):
         pass
 
 
-def make_sklearn_primitive(sklearn_cls, prim_type: PrimitiveType):
+def make_sklearn_primitive(sk_cls, prim_type: PrimitiveType):
     class SKPrimitive(Primitive):
         f"""
         An automatically generated `Primitive` implementing wrapper for the
-        '{sklearn_cls.__name__}' class in the `sklearn` package.
+        '{sk_cls.__name__}' class in the `sklearn` package.
         """
 
         primitive_type = prim_type
+        sklearn_cls = sk_cls
 
         def __init__(self) -> None:
-            self.sk_primitive = sklearn_cls()
+            self.sk_primitive = self.sklearn_cls()
 
         def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
             """
@@ -90,6 +91,6 @@ def make_sklearn_primitive(sklearn_cls, prim_type: PrimitiveType):
             else:
                 return pd.DataFrame(outputs)
 
-    SKPrimitive.__name__ = f"{sklearn_cls.__name__}Primitive"
+    SKPrimitive.__name__ = f"{sk_cls.__name__}Primitive"
 
     return SKPrimitive
