@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Type
+import typing as t
 
 import pandas as pd
 from sklearn.utils import shuffle
@@ -16,9 +16,9 @@ from skplumber.metrics import default_metrics, metrics
 
 class SKPlumber:
 
-    models_map: Dict[ProblemType, List[Type[Primitive]]] = {
-        ProblemType.CLASSIFICATION: classifier_primitives,
-        ProblemType.REGRESSION: regressor_primitives,
+    models_map: t.Dict[ProblemType, t.List[t.Type[Primitive]]] = {
+        ProblemType.CLASSIFICATION: list(classifier_primitives.values()),
+        ProblemType.REGRESSION: list(regressor_primitives.values()),
     }
 
     def crank(
@@ -31,7 +31,7 @@ class SKPlumber:
         sampler: PipelineSampler = None,
         n_splits: int = 3,
         n: int = 10,
-    ) -> Tuple[Pipeline, float]:
+    ) -> t.Tuple[Pipeline, float]:
         """
         The main runtime method of the package. Give a dataset, problem type,
         and sampling strategy, it tries to find, in a limited amount of time,
@@ -97,7 +97,7 @@ class SKPlumber:
             num_samples=n,
             n_splits=n_splits,
             models=self.models_map[problem_type],
-            transformers=transformer_primitives,
+            transformers=list(transformer_primitives.values()),
             problem_type=problem_type,
             metric=_metric,
         )

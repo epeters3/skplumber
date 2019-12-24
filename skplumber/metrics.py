@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict
+import typing as t
 import math
 
 import pandas as pd
@@ -68,13 +68,13 @@ class Accuracy(Metric):
         return a > b
 
 
-metrics: Dict[str, Metric] = {
+metrics: t.Dict[str, Metric] = {
     "rmse": RMSE(),
     "f1macro": F1MACRO(),
     "accuracy": Accuracy(),
 }
 
-default_metrics: Dict[ProblemType, Metric] = {
+default_metrics: t.Dict[ProblemType, Metric] = {
     ProblemType.REGRESSION: RMSE(),
     ProblemType.CLASSIFICATION: Accuracy(),
 }

@@ -1,4 +1,4 @@
-from typing import List, Type, Optional
+import typing as t
 
 import pandas as pd
 
@@ -10,7 +10,7 @@ from skplumber.primitives.custom_primitives.preprocessing import (
 
 
 class PrimitiveStep:
-    def __init__(self, primitive_cls: Type[Primitive], inputs: List[int]):
+    def __init__(self, primitive_cls: t.Type[Primitive], inputs: t.List[int]):
         """
         Parameters
         ----------
@@ -30,7 +30,7 @@ class Pipeline:
         Initializes the pipeline, including some preliminary
         common data preprocessing.
         """
-        self.steps: List[PrimitiveStep] = []
+        self.steps: t.List[PrimitiveStep] = []
         self.add_step(RandomImputer)
         self.add_step(OneHotEncoder)
 
@@ -39,7 +39,7 @@ class Pipeline:
         return len(self.steps) - 1
 
     def add_step(
-        self, primitive_cls: Type[Primitive], inputs: List[int] = None
+        self, primitive_cls: t.Type[Primitive], inputs: t.List[int] = None
     ) -> None:
         """
         Adds `primitive` as the next step to this pipeline. If `inputs` is `None`,
@@ -51,9 +51,9 @@ class Pipeline:
         self.steps.append(step)
 
     def _run(
-        self, X: pd.DataFrame, y: Optional[pd.Series], *, fit: bool,
+        self, X: pd.DataFrame, y: t.Optional[pd.Series], *, fit: bool,
     ) -> pd.DataFrame:
-        all_step_outputs: List[pd.DataFrame] = []
+        all_step_outputs: t.List[pd.DataFrame] = []
 
         for step_i, step in enumerate(self.steps):
             if step_i == 0:

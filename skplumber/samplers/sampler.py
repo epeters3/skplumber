@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Type
+import typing as t
 
 import pandas as pd
 from sklearn.model_selection import KFold
@@ -17,8 +17,8 @@ class PipelineSampler(ABC):
         *,
         num_samples: int,
         n_splits: int,
-        models: List[Type[Primitive]],
-        transformers: List[Type[Primitive]],
+        models: t.List[t.Type[Primitive]],
+        transformers: t.List[t.Type[Primitive]],
         problem_type: ProblemType,
         metric: Metric,
     ):
@@ -69,7 +69,7 @@ class PipelineSampler(ABC):
     def sample_pipeline(
         self,
         problem_type: ProblemType,
-        models: List[Type[Primitive]],
-        transformers: List[Type[Primitive]],
+        models: t.List[t.Type[Primitive]],
+        transformers: t.List[t.Type[Primitive]],
     ):
         pass

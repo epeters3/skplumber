@@ -1,5 +1,5 @@
 import random
-from typing import List, Type
+import typing as t
 
 from skplumber.primitives.primitive import Primitive
 from skplumber.samplers.sampler import PipelineSampler
@@ -23,8 +23,8 @@ class OneStackPipelineSampler(PipelineSampler):
     def sample_pipeline(
         self,
         problem_type: ProblemType,
-        models: List[Type[Primitive]],
-        transformers: List[Type[Primitive]],
+        models: t.List[t.Type[Primitive]],
+        transformers: t.List[t.Type[Primitive]],
     ) -> Pipeline:
         all_primitives = models + transformers
         pipeline = Pipeline()

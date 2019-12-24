@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+import typing as t
 
 import pandas as pd
 import scipy as sp
@@ -19,7 +19,7 @@ class Primitive(ABC):
         pass
 
     @property
-    def supported_problem_types(self) -> List[ProblemType]:
+    def supported_problem_types(self) -> t.List[ProblemType]:
         if self.primitive_type == PrimitiveType.REGRESSOR:
             return [ProblemType.REGRESSION]
         elif self.primitive_type == PrimitiveType.CLASSIFIER:

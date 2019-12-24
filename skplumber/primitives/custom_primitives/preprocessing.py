@@ -1,4 +1,4 @@
-from typing import Dict
+import typing as t
 
 import pandas as pd
 import numpy as np
@@ -23,7 +23,7 @@ class OneHotEncoder(Primitive):
     top_n = 10
 
     def __init__(self) -> None:
-        self.onehot_col_names_to_vals: Dict[str, pd.Series] = {}
+        self.onehot_col_names_to_vals: t.Dict[str, pd.Series] = {}
 
     def fit(self, X, y) -> None:
         # Get the categorical columns
@@ -72,7 +72,7 @@ class RandomImputer(Primitive):
     primitive_type = PrimitiveType.PREPROCESSOR
 
     def __init__(self) -> None:
-        self.col_names_to_known_vals: Dict[str, pd.Series] = {}
+        self.col_names_to_known_vals: t.Dict[str, pd.Series] = {}
 
     def fit(self, X, y) -> None:
         for col in X:
