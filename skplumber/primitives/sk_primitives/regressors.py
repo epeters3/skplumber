@@ -54,7 +54,7 @@ _regressors = [
     MLPRegressor,
 ]
 
-regressor_primitives = {}
+regressors = {}
 for est in _regressors:
     primitive = make_sklearn_primitive(est, PrimitiveType.REGRESSOR)
-    regressor_primitives[primitive.__name__] = primitive
+    regressors[primitive.__name__] = primitive

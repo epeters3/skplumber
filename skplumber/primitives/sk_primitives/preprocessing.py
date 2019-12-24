@@ -5,7 +5,7 @@ from skplumber.consts import PrimitiveType
 
 _preprocessors = [SimpleImputer]
 
-preprocessing_primitives = {}
+preprocessors = {}
 for est in _preprocessors:
     primitive = make_sklearn_primitive(est, PrimitiveType.PREPROCESSOR)
-    preprocessing_primitives[primitive.__name__] = primitive
+    preprocessors[primitive.__name__] = primitive

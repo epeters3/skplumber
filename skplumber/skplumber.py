@@ -8,17 +8,17 @@ from skplumber.samplers.sampler import PipelineSampler
 from skplumber.samplers.straight import StraightPipelineSampler
 from skplumber.pipeline import Pipeline
 from skplumber.primitives.primitive import Primitive
-from skplumber.primitives.sk_primitives.classifiers import classifier_primitives
-from skplumber.primitives.sk_primitives.regressors import regressor_primitives
-from skplumber.primitives.sk_primitives.transformers import transformer_primitives
+from skplumber.primitives.sk_primitives.classifiers import classifiers
+from skplumber.primitives.sk_primitives.regressors import regressors
+from skplumber.primitives.sk_primitives.transformers import transformers
 from skplumber.metrics import default_metrics, metrics
 
 
 class SKPlumber:
 
     models_map: t.Dict[ProblemType, t.List[t.Type[Primitive]]] = {
-        ProblemType.CLASSIFICATION: list(classifier_primitives.values()),
-        ProblemType.REGRESSION: list(regressor_primitives.values()),
+        ProblemType.CLASSIFICATION: list(classifiers.values()),
+        ProblemType.REGRESSION: list(regressors.values()),
     }
 
     def crank(
@@ -97,7 +97,7 @@ class SKPlumber:
             num_samples=n,
             n_splits=n_splits,
             models=self.models_map[problem_type],
-            transformers=list(transformer_primitives.values()),
+            transformers=list(transformers.values()),
             problem_type=problem_type,
             metric=_metric,
         )

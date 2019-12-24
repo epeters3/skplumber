@@ -47,7 +47,7 @@ _transformers = [
     # TSNE,
 ]
 
-transformer_primitives = {}
+transformers = {}
 for est in _transformers:
     primitive = make_sklearn_primitive(est, PrimitiveType.TRANSFORMER)
-    transformer_primitives[primitive.__name__] = primitive
+    transformers[primitive.__name__] = primitive
