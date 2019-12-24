@@ -60,6 +60,7 @@ _classifiers = [
     GaussianMixture,
 ]
 
-classifier_primitives = [
-    make_sklearn_primitive(est, PrimitiveType.CLASSIFIER) for est in _classifiers
-]
+classifier_primitives = {}
+for est in _classifiers:
+    primitive = make_sklearn_primitive(est, PrimitiveType.CLASSIFIER)
+    classifier_primitives[primitive.__name__] = primitive
