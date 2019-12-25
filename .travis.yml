@@ -1,15 +1,13 @@
 language: python
-
 install:
-  - python setup.py install
-  - rm -r skplumber
-
+- python setup.py install
+- rm -r skplumber
 script:
-  - nosetests -s -v
-
+- nosetests -s -v
 deploy:
   provider: pypi
-  user: "__token__"
-  password: $PYPI_API_KEY
+  user: __token__
+  password:
+    secure: BY6x5TNSoqqGd8hpYqT3EsslK20NZJ5Nuyq2lAV9MW0EmLB5BddtWxAzCtaqeqdiD5XTb1lgc0/zHf+zXi/WE9Qm5OvIILtby4TZ5pSfqGR7LKiyndMSkw/M3rgVW42uae5kg68dIk86Y3t/IttBAj6DG+AovcsGcK6Xm1fq4Okq0lXA6983at9BVhkicA3GdEECN+oK8/Tmeo+CqKrK70+XknQrhzM9JCMLRVMkj/EgOwEMjyzTj5hnVZRl1/JT3JNRObhN971Zboql9HT84l3gha4hXujAijBPDXM4S2MprFuYibHxgwcloPvNzlxw5lAj8Wl/4wXxtNtkEwvxI+VCfuXnoM6ctYk2SAWL7dPPX8hyTUqxvsN2e/IrIF8GYByP3qxVKah0IcrRtWrIfxpVyvfWz5pCDc4NhXTPLPpjm7ESPD78F/SavBtvzdsph46ehmkD2sDlnPzPePY8Dk4H+PWvUV1AnRbUQxgFpcA8N7rpbnOVEVjhqcusxCyGcg6kgSoN1FdhTCWNf7na4ndWBnHSuP7GHRELZ0oOn8ghLveNncvRsSC8T2We7jC+UFORCyXOZD+M5HXS10tEPAISH+9MjJ7UffvAH2GdZcOViUxhVk9IWbi+IKkWOh8efib/wrdUr5jcV2gU4eVRgcGn2/NkfBm7suF8OAOHMi0=
   on:
     tags: true
