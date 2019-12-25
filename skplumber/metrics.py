@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 import typing as t
 import math
 
@@ -10,71 +9,61 @@ from sklearn.metrics import accuracy_score
 from skplumber.consts import ProblemType
 
 
-class Metric(ABC):
-    @property
-    @abstractmethod
-    def problem_type(self) -> ProblemType:
+class Metric:
+    def __init__(
+        self,
+        name: str,
+        problem_type: ProblemType,
+        compute: t.Callable[[pd.Series, pd.Series], float],
+        is_better_than: t.Callable[[float, float], bool],
+    ) -> None:
         """
-        The problem type this metric can be computed for.
+        Parameters
+        ----------
+        compute
+            The method that actually computes the score between the
+            truth `y` and the `predictions`.
+        is_better_than
+            Should return `True` if the first arg (a) is better than the
+            second arg (b) in regards to this metric. E.g. if this metric were
+            RMSE, `a=25`, and second `b=30`, then this method would
+            return `True`.
         """
-        pass
-
-    @abstractmethod
-    def __call__(self, y: pd.Series, predictions: pd.Series) -> float:
-        """
-        The method that actually computes the score between the
-        truth `y` and the `predictions`.
-        """
-        pass
-
-    @abstractmethod
-    def is_better_than(self, a: float, b: float) -> bool:
-        """
-        Should return `True` if `a` is better than `b` in
-        regards to this metric. E.g. if this metric were
-        RMSE, `a=25`, and `b=30`, then this method would
-        return `True`.
-        """
-        pass
-
-
-class RMSE(Metric):
-    problem_type = ProblemType.REGRESSION
+        self.name = name
+        self.problem_type = problem_type
+        self._compute = compute
+        self.is_better_than = is_better_than
 
     def __call__(self, y: pd.Series, predictions: pd.Series) -> float:
-        return math.sqrt(mse(y, predictions))
-
-    def is_better_than(self, a: float, b: float) -> bool:
-        return a < b
+        return self._compute(y, predictions)
 
 
-class F1MACRO(Metric):
-    problem_type = ProblemType.CLASSIFICATION
+rmse = Metric(
+    "rmse",
+    ProblemType.REGRESSION,
+    lambda y, preds: math.sqrt(mse(y, preds)),
+    lambda a, b: a < b,
+)
 
-    def __call__(self, y: pd.Series, predictions: pd.Series) -> float:
-        return f1_score(y, predictions, average="macro")
+f1macro = Metric(
+    "f1macro",
+    ProblemType.CLASSIFICATION,
+    lambda y, preds: f1_score(y, preds, average="macro"),
+    lambda a, b: a > b,
+)
 
-    def is_better_than(self, a: float, b: float) -> bool:
-        return a > b
-
-
-class Accuracy(Metric):
-    problem_type = ProblemType.CLASSIFICATION
-
-    def __call__(self, y: pd.Series, predictions: pd.Series) -> float:
-        return accuracy_score(y, predictions)
-
-    def is_better_than(self, a: float, b: float) -> bool:
-        return a > b
+accuracy = Metric(
+    "accuracy", ProblemType.CLASSIFICATION, accuracy_score, lambda a, b: a > b
+)
 
 
 metrics: t.Dict[str, Metric] = {
-    "rmse": RMSE(),
-    "f1macro": F1MACRO(),
-    "accuracy": Accuracy(),
+    "rmse": rmse,
+    "f1macro": f1macro,
+    "accuracy": accuracy,
 }
 
 default_metrics: t.Dict[ProblemType, Metric] = {
-    ProblemType.REGRESSION: RMSE(),
-    ProblemType.CLASSIFICATION: Accuracy(),
+    ProblemType.REGRESSION: rmse,
+    ProblemType.CLASSIFICATION: accuracy,
 }
