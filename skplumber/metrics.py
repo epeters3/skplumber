@@ -2,7 +2,7 @@ import typing as t
 import math
 
 import pandas as pd
-from sklearn.metrics import mean_squared_error as mse
+from sklearn.metrics import mean_squared_error as mse, mean_squared_log_error as msle
 from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
 
@@ -39,26 +39,34 @@ class Metric:
 
 
 rmse = Metric(
-    "rmse",
+    "Root Mean Squared Error",
     ProblemType.REGRESSION,
     lambda y, preds: math.sqrt(mse(y, preds)),
     lambda a, b: a < b,
 )
 
+rmsle = Metric(
+    "Root Mean Squared Log Error",
+    ProblemType.REGRESSION,
+    lambda y, preds: math.sqrt(msle(y, preds)),
+    lambda a, b: a < b,
+)
+
 f1macro = Metric(
-    "f1macro",
+    "F1 Macro",
     ProblemType.CLASSIFICATION,
     lambda y, preds: f1_score(y, preds, average="macro"),
     lambda a, b: a > b,
 )
 
 accuracy = Metric(
-    "accuracy", ProblemType.CLASSIFICATION, accuracy_score, lambda a, b: a > b
+    "Accuracy", ProblemType.CLASSIFICATION, accuracy_score, lambda a, b: a > b
 )
 
 
 metrics: t.Dict[str, Metric] = {
     "rmse": rmse,
+    "rmsle": rmsle,
     "f1macro": f1macro,
     "accuracy": accuracy,
 }
