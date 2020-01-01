@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="skplumber",
-    version="0.4.3dev",
+    version="0.4.4dev",
     packages=find_packages(include=["skplumber", "skplumber.*"]),
     license="MIT",
     url="https://github.com/epeters3/skplumber",
@@ -17,5 +17,6 @@ setup(
         "pytest>=5.2.4",
         "Cython==0.29.14",
         "scipy>=1.3.2",
+        "colorlog>=4.0.2",
     ],
 )

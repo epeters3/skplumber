@@ -100,3 +100,9 @@ class Pipeline:
         Makes a prediction for each instance in `X`, returning the predictions.
         """
         return self._run(X, None, fit=False)
+
+    def __str__(self) -> str:
+        string = f"Pipeline object with {len(self.steps)} steps:"
+        for step in self.steps:
+            string += "\n\t" + step.primitive.__class__.__name__
+        return string

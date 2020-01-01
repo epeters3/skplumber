@@ -12,6 +12,7 @@ from skplumber.primitives.sk_primitives.classifiers import classifiers
 from skplumber.primitives.sk_primitives.regressors import regressors
 from skplumber.primitives.sk_primitives.transformers import transformers
 from skplumber.metrics import default_metrics, metrics
+from skplumber.utils import logger
 
 
 class SKPlumber:
@@ -102,10 +103,9 @@ class SKPlumber:
             metric=_metric,
         )
 
-        print(f"found best test score of {best_score}")
-        print("pipeline steps of best model:")
-        for step in best_pipeline.steps:
-            print(step.primitive.__class__.__name__)
+        logger.info(f"found best test score of {best_score}")
+        logger.info("best pipeline:")
+        logger.info(best_pipeline)
 
         # Now that we have the "best" model, train it on
         # the full dataset so it can see as much of the

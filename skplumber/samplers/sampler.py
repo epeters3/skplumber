@@ -7,6 +7,7 @@ from sklearn.model_selection import KFold
 from skplumber.primitives.primitive import Primitive
 from skplumber.consts import ProblemType
 from skplumber.metrics import Metric
+from skplumber.utils import logger
 
 
 class PipelineSampler(ABC):
@@ -36,7 +37,7 @@ class PipelineSampler(ABC):
         cv = KFold(n_splits=n_splits, shuffle=True, random_state=0)
 
         for i in range(num_samples):
-            print(f"sampling pipeline {i+1}/{num_samples}")
+            logger.info(f"sampling pipeline {i+1}/{num_samples}")
             pipeline = self.sample_pipeline(problem_type, models, transformers)
 
             # Perform cross validation of `n_splits` folds, calculating
@@ -54,7 +55,7 @@ class PipelineSampler(ABC):
 
             test_score = sum(scores) / len(scores)
 
-            print(f"achieved test score: {test_score}")
+            logger.info(f"achieved test score: {test_score}")
             if i == 0:
                 best_pipeline = pipeline
                 best_score = test_score
