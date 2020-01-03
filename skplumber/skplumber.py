@@ -32,6 +32,7 @@ class SKPlumber:
         sampler: PipelineSampler = None,
         n_splits: int = 3,
         n: int = 10,
+        pipeline_timeout: t.Optional[int] = None,
     ) -> t.Tuple[Pipeline, float]:
         """
         The main runtime method of the package. Give a dataset, problem type,
@@ -64,6 +65,10 @@ class SKPlumber:
             cross validation of each sampled pipeine. 
         n
             The number of pipelines to try out on the problem.
+        pipeline_timeout
+            The maximum number of seconds to spend evaluating any one pipeline.
+            If a sampled pipeline takes longer than this to evaluate, it will
+            be skipped.
         
         Returns
         -------
@@ -101,6 +106,7 @@ class SKPlumber:
             transformers=list(transformers.values()),
             problem_type=problem_type,
             metric=_metric,
+            pipeline_timeout=pipeline_timeout,
         )
 
         logger.info(f"found best test score of {best_score}")
