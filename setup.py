@@ -1,15 +1,18 @@
 from setuptools import setup, find_packages
 
+with open("README.md", "r") as f:
+    long_description = f.read()
+
 setup(
     name="skplumber",
-    version="0.4.6dev",
+    version="0.4.7dev",
     packages=find_packages(include=["skplumber", "skplumber.*"]),
     license="MIT",
     url="https://github.com/epeters3/skplumber",
     author="Evan Peterson",
     author_email="evanpeterson17@gmail.com",
     description="A scikit-learn based AutoML tool",
-    long_description=open("README.md").read(),
+    long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
         "scikit-learn>=0.21.3",
