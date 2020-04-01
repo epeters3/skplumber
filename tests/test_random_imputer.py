@@ -12,6 +12,36 @@ class TestRandomImputer(TestCase):
         imputed = self._fit_produce(X)
         self.assertFalse(imputed.isna().all().all())
 
+    def test_can_impute_with_empty_columns(self):
+        """
+        If a column has no values, the imputer will not have any
+        values to sample from to fill null values in that column,
+        so should just drop the columnn.
+        """
+        X_with_all_nans = pd.DataFrame(
+            {
+                "cat": ["a", "b", None, "a"],
+                "num": [1, np.nan, np.nan, 1],
+                "nans": [np.nan, np.nan, np.nan, np.nan],
+            }
+        )
+        imputed = self._fit_produce(X_with_all_nans)
+        self.assertFalse(imputed.isna().all().all())  # no null values
+        self.assertEqual(
+            tuple(imputed.columns), ("cat", "num")
+        )  # empty column was dropped
+
+        X_with_all_nones = pd.DataFrame(
+            {
+                "cat": ["a", "b", None, "a"],
+                "num": [1, np.nan, np.nan, 1],
+                "nones": [None, None, None, None],
+            }
+        )
+        imputed = self._fit_produce(X_with_all_nones)
+        self.assertFalse(imputed.isna().all().all())
+        self.assertEqual(tuple(imputed.columns), ("cat", "num"))
+
     def test_can_fit_on_subsequent_dataset(self):
         """
         Once fit on a dataset, it should be able to be fit on a totally new

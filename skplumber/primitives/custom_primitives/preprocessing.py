@@ -76,29 +76,42 @@ class RandomImputer(Primitive):
 
     def __init__(self) -> None:
         self.col_names_to_known_vals: t.Dict[str, pd.Series] = {}
+        self.cols_to_drop: t.Set[str] = set()
 
     def fit(self, X, y) -> None:
         # We could be fitting on a new dataset with different columns,
         # so forget everything from the last dataset.
         self.col_names_to_known_vals.clear()
+        self.cols_to_drop.clear()
 
         for col in X:
+            if X[col].isna().all():
+                # This column has no values, so we won't have any values
+                # to sample from when imputing values for it. So we drop
+                # it at produce time.
+                self.cols_to_drop.add(col)
+                continue
+
             # The index of a series returned by `pd.Series.value_counts`
             # holds the values, and the actual entries of the series hold
             # the proportions those values have in `X`.
             self.col_names_to_known_vals[col] = X[col].value_counts(normalize=True)
 
     def produce(self, X):
-        # Impute missing values using the known values found
-        # in `self.fit`.
         result = X.copy()
+        result.drop(self.cols_to_drop, axis="columns", inplace=True)
+
+        # Impute missing values using the known values found
+        # in `self.fit`
         for col, known_vals in self.col_names_to_known_vals.items():
+
             # Fill all missing values with values sampled from the
             # distribution observed for this column in the `self.fit`
             # method.
             fill_vals = pd.Series(
                 np.random.choice(known_vals.index, p=known_vals, size=len(result.index))
             )
+
             # The indices of fill_vals and result need to match so
             # every NaN in result can have a companion value in
             # `fill_vals` to be filled with.
@@ -106,4 +119,5 @@ class RandomImputer(Primitive):
             result[col].fillna(
                 fill_vals, inplace=True,
             )
+
         return result
