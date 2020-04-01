@@ -18,14 +18,17 @@ class OneHotEncoder(Primitive):
 
     primitive_type = PrimitiveType.PREPROCESSOR
 
-    # the max number of most common values to
-    # one-hot encode for each column
-    top_n = 10
-
-    def __init__(self) -> None:
+    def __init__(self, top_n: int = 10) -> None:
+        # the max number of most common values to
+        # one-hot encode for each column
+        self.top_n = top_n
         self.onehot_col_names_to_vals: t.Dict[str, pd.Series] = {}
 
     def fit(self, X, y) -> None:
+        # We could be fitting on a new dataset with different columns,
+        # so forget everything from the last dataset.
+        self.onehot_col_names_to_vals.clear()
+
         # Get the categorical columns
         categoricals = X.select_dtypes(include=["object", "category"])
         for col_name in categoricals.columns:
@@ -75,6 +78,10 @@ class RandomImputer(Primitive):
         self.col_names_to_known_vals: t.Dict[str, pd.Series] = {}
 
     def fit(self, X, y) -> None:
+        # We could be fitting on a new dataset with different columns,
+        # so forget everything from the last dataset.
+        self.col_names_to_known_vals.clear()
+
         for col in X:
             # The index of a series returned by `pd.Series.value_counts`
             # holds the values, and the actual entries of the series hold
