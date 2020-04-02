@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import typing as t
 
 import pandas as pd
-from sklearn.model_selection import KFold
 
 from skplumber.primitives.primitive import Primitive
 from skplumber.pipeline import Pipeline
@@ -18,12 +17,12 @@ class PipelineSampler(ABC):
         y: pd.Series,
         *,
         num_samples: int,
-        n_splits: int,
         models: t.List[t.Type[Primitive]],
         transformers: t.List[t.Type[Primitive]],
         problem_type: ProblemType,
         metric: Metric,
-        pipeline_timeout: t.Optional[int] = None,
+        evaluator: t.Callable,
+        pipeline_timeout: t.Optional[int],
     ) -> t.Tuple[Pipeline, float]:
         """
         Samples `num_samples` pipelines, returning the best one
@@ -36,7 +35,9 @@ class PipelineSampler(ABC):
         float
             The score of the best pipeline that was trained.
         """
-        cv = KFold(n_splits=n_splits, shuffle=True, random_state=0)
+        if num_samples < 1:
+            raise ValueError(f"num_samples must be >= 1, got {num_samples}")
+
         should_timeout = pipeline_timeout is not None
         best_score = metric.worst_value
         best_pipeline = None
@@ -48,10 +49,12 @@ class PipelineSampler(ABC):
             try:
 
                 with conditional_timeout(pipeline_timeout, should_timeout):
-                    pipeline, test_score = self._evaluate_pipeline(
-                        pipeline, X, y, metric, cv
-                    )
-                    if metric.is_better_than(test_score, best_score):
+                    test_score = evaluator(pipeline, X, y, metric)
+                    logger.info(f"achieved test score: {test_score}")
+                    if (
+                        metric.is_better_than(test_score, best_score)
+                        or best_pipeline is None
+                    ):
                         best_score = test_score
                         best_pipeline = pipeline
 
@@ -79,27 +82,3 @@ class PipelineSampler(ABC):
         transformers: t.List[t.Type[Primitive]],
     ) -> Pipeline:
         pass
-
-    def _evaluate_pipeline(
-        self,
-        pipeline: Pipeline,
-        X: pd.DataFrame,
-        y: pd.Series,
-        metric: Metric,
-        cv: KFold,
-    ) -> t.Tuple[Pipeline, float]:
-        # Perform cross validation, calculating the average performance
-        # over the folds as this pipeline's performance.
-        scores = []
-        for train_index, test_index in cv.split(X):
-            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-
-            pipeline.fit(X_train, y_train)
-            test_predictions = pipeline.predict(X_test)
-            fold_score = metric(y_test, test_predictions)
-            scores.append(fold_score)
-
-        test_score = sum(scores) / len(scores)
-        logger.info(f"achieved test score: {test_score}")
-        return pipeline, test_score

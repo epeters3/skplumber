@@ -13,6 +13,7 @@ from skplumber.primitives.sk_primitives.regressors import regressors
 from skplumber.primitives.sk_primitives.transformers import transformers
 from skplumber.metrics import default_metrics, metrics
 from skplumber.utils import logger
+from skplumber.evaluators import make_train_test_evaluator
 
 
 class SKPlumber:
@@ -30,8 +31,8 @@ class SKPlumber:
         problem: str,
         metric: str = None,
         sampler: PipelineSampler = None,
-        n_splits: int = 3,
         n: int = 10,
+        evaluator: t.Callable = None,
         pipeline_timeout: t.Optional[int] = None,
     ) -> t.Tuple[Pipeline, float]:
         """
@@ -60,11 +61,25 @@ class SKPlumber:
             types of pipelines to sample and try out on the problem. If `None`,
             the `skplumber.samplers.straight.StraightPipelineSampler` will be
             used with default arguments.
-        n_splits
-            The number of folds to conduct when evaluating the performance via
-            cross validation of each sampled pipeine. 
         n
             The number of pipelines to try out on the problem.
+        evaluator
+            The evaluation strategy to use to fit and score a pipeline to determine
+            its performance. Must be a function with signature:
+            ```
+            f(
+                pipeline: Pipeline, X: pd.DataFrame, y: pd.Series, metric: Metric
+            ) -> float:
+            ```,
+            meaning it must accept a `skplumber.Pipeline` object, dataset `X` with
+            corresponding target vector `y`, and an instantiation of a class
+            inheriting from `skplumber.metrics.Metric`. Should fit on the dataset
+            and compute and return its performance on that dataset. For basic k-fold
+            cross validation or train/test split strategies, see
+            `skplumber.evaluators.make_kfold_evaluator` or
+            `skplumber.evaluators.make_train_test_evaluator`.
+            If no evaluator is provided, a default train/test split evaluation strategy
+            will be used.
         pipeline_timeout
             The maximum number of seconds to spend evaluating any one pipeline.
             If a sampled pipeline takes longer than this to evaluate, it will
@@ -97,15 +112,18 @@ class SKPlumber:
         if sampler is None:
             sampler = StraightPipelineSampler()
 
+        if evaluator is None:
+            evaluator = make_train_test_evaluator()
+
         best_pipeline, best_score = sampler.run(
             X,
             y,
             num_samples=n,
-            n_splits=n_splits,
             models=self.models_map[problem_type],
             transformers=list(transformers.values()),
             problem_type=problem_type,
             metric=_metric,
+            evaluator=evaluator,
             pipeline_timeout=pipeline_timeout,
         )
 
