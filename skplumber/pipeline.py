@@ -7,10 +7,11 @@ from skplumber.primitives.custom_primitives.preprocessing import (
     OneHotEncoder,
     RandomImputer,
 )
+from skplumber.primitives.parammeta import ParamMeta
 
 
 class PrimitiveStep:
-    def __init__(self, primitive_cls: t.Type[Primitive], inputs: t.List[int]):
+    def __init__(self, primitive_cls: t.Type[Primitive], inputs: t.List[int], **params):
         """
         Parameters
         ----------
@@ -19,8 +20,10 @@ class PrimitiveStep:
         inputs
             The indices of the pipeline steps for whose output
             this step will use as its input.
+        params
+            Any hyperparameters to set in the primitive.
         """
-        self.primitive = primitive_cls()
+        self.primitive = primitive_cls(**params)
         self.inputs = inputs
 
 
@@ -81,6 +84,44 @@ class Pipeline:
             )
         return final_predictions
 
+    @property
+    def param_metas(self) -> t.Dict[int, t.Dict[str, ParamMeta]]:
+        return {i: step.primitive.param_metas for i, step in enumerate(self.steps)}
+
+    def param_metas_with_data(
+        self, X: pd.DataFrame
+    ) -> t.Dict[int, t.Dict[str, ParamMeta]]:
+        return {
+            i: step.primitive.param_metas_with_data(X)
+            for i, step in enumerate(self.steps)
+        }
+
+    def get_params(self) -> t.Dict[int, t.Dict[str, t.Any]]:
+        """
+        Get all the pipeline's tunable hyperparameters. A given
+        param for a given step can be accessed via e.g.:
+        ```
+        params = pipeline.get_params()
+        params[0]["criterion"]
+        ```
+        That yields the value of the "criterion" param of
+        the 0th step in the pipeline.
+        """
+        return {i: step.primitive.get_params() for i, step in enumerate(self.steps)}
+
+    def set_params(self, params: t.Dict[int, t.Dict[str, t.Any]]) -> None:
+        """
+        Sets any tunable hyperparameters on one or more steps in the
+        pipeline. E.g. to set the "criterion" param of the 0th step:
+        ```
+        pipeline.set_params({0: {"criterion": "gini"}})
+        ```
+        """
+        for i, step_params in params.items():
+            if i < 0 or i >= len(self.steps):
+                raise ValueError(f"pipeline does not have a step at index {i}")
+            self.steps[i].primitive.set_params(**step_params)
+
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
         """
         Fits the pipeline on `X` and `y`, meaning, learns how to use `X`
@@ -104,5 +145,5 @@ class Pipeline:
     def __str__(self) -> str:
         string = f"Pipeline object with {len(self.steps)} steps:"
         for step in self.steps:
-            string += "\n\t" + step.primitive.__class__.__name__
+            string += "\n\t" + str(step.primitive)
         return string

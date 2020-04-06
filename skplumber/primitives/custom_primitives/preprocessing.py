@@ -17,6 +17,7 @@ class OneHotEncoder(Primitive):
     """
 
     primitive_type = PrimitiveType.PREPROCESSOR
+    param_metas = {}
 
     def __init__(self, top_n: int = 10) -> None:
         # the max number of most common values to
@@ -73,6 +74,7 @@ class RandomImputer(Primitive):
     """
 
     primitive_type = PrimitiveType.PREPROCESSOR
+    param_metas = {}
 
     def __init__(self) -> None:
         self.col_names_to_known_vals: t.Dict[str, pd.Series] = {}
