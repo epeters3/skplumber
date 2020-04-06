@@ -9,7 +9,7 @@ from skplumber.metrics import Metric
 
 
 def make_kfold_evaluator(
-    k: int = 5, shuffle: bool = True, random_state: int = None
+    k: int = 5, shuffle: bool = True, random_state: int = 0
 ) -> t.Callable:
     """
     Returns a pipeline evaluator that performs
@@ -38,7 +38,7 @@ def make_kfold_evaluator(
 
 
 def make_train_test_evaluator(
-    test_size: float = 0.33, shuffle: bool = True, random_state: int = None
+    test_size: float = 0.33, shuffle: bool = True, random_state: int = 0
 ) -> t.Callable:
     """
     Returns a pipeline evaluator that trains the pipeline on a training
@@ -64,7 +64,7 @@ def make_down_sample_evaluator(
     sample_ratio: float,
     test_size: float = 0.33,
     shuffle: bool = True,
-    random_state: int = None,
+    random_state: int = 0,
 ) -> t.Callable:
     """
     Returns a pipeline evaluator that conducts a basic
