@@ -21,5 +21,6 @@ setup(
         "Cython==0.29.14",
         "scipy>=1.3.2",
         "colorlog>=4.0.2",
+        "flexga>=1.1.0",
     ],
 )
