@@ -10,6 +10,12 @@ from skplumber.metrics import Metric
 from skplumber.utils import logger, conditional_timeout, EvaluationTimeoutError
 
 
+class SamplerState(t.NamedTuple):
+    score: float
+    pipeline: Pipeline
+    nit: int
+
+
 class PipelineSampler(ABC):
     def run(
         self,
@@ -23,6 +29,7 @@ class PipelineSampler(ABC):
         metric: Metric,
         evaluator: t.Callable,
         pipeline_timeout: t.Optional[int],
+        callback: t.Optional[t.Callable] = None,
     ) -> t.Tuple[Pipeline, float]:
         """
         Samples `num_samples` pipelines, returning the best one
@@ -42,7 +49,7 @@ class PipelineSampler(ABC):
         best_score = metric.worst_value
         best_pipeline = None
 
-        for i in range(num_samples):
+        for i in range(1, num_samples + 1):
             logger.info(f"sampling pipeline {i+1}/{num_samples}")
             pipeline = self.sample_pipeline(problem_type, models, transformers)
 
@@ -51,12 +58,18 @@ class PipelineSampler(ABC):
                 with conditional_timeout(pipeline_timeout, should_timeout):
                     test_score = evaluator(pipeline, X, y, metric)
                     logger.info(f"achieved test score: {test_score}")
+
                     if (
                         metric.is_better_than(test_score, best_score)
                         or best_pipeline is None
                     ):
                         best_score = test_score
                         best_pipeline = pipeline
+
+                    if callback is not None:
+                        exit_early = callback(SamplerState(test_score, pipeline, i))
+                        if exit_early:
+                            break
 
             except EvaluationTimeoutError:
 

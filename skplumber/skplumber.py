@@ -14,6 +14,7 @@ from skplumber.primitives.sk_primitives.transformers import transformers
 from skplumber.metrics import default_metrics, metrics
 from skplumber.utils import logger
 from skplumber.evaluators import make_train_test_evaluator
+from skplumber.tuners.ga import ga_tune
 
 
 class SKPlumber:
@@ -27,16 +28,18 @@ class SKPlumber:
         self,
         X: pd.DataFrame,
         y: pd.Series,
-        *,
         problem: str,
+        *,
         metric: str = None,
         sampler: PipelineSampler = None,
         n: int = 10,
         evaluator: t.Callable = None,
         pipeline_timeout: t.Optional[int] = None,
+        tune: bool = False,
+        callback: t.Optional[t.Callable] = None,
     ) -> t.Tuple[Pipeline, float]:
         """
-        The main runtime method of the package. Give a dataset, problem type,
+        The main runtime method of the package. Given a dataset, problem type,
         and sampling strategy, it tries to find, in a limited amount of time,
         the best performing pipeline it can.
 
@@ -79,11 +82,23 @@ class SKPlumber:
             `skplumber.evaluators.make_kfold_evaluator` or
             `skplumber.evaluators.make_train_test_evaluator`.
             If no evaluator is provided, a default train/test split evaluation strategy
-            will be used.
+            will be used. `evaluator` will be used during both the sampling and
+            hyperparameter tuning stages, if `tune==True`.
         pipeline_timeout
             The maximum number of seconds to spend evaluating any one pipeline.
             If a sampled pipeline takes longer than this to evaluate, it will
             be skipped.
+        tune
+            Whether to perform hyperparameter tuning on the best found pipeline.
+        callback
+            Optional callback function. Will be called after each sampled pipeline
+            is evaluated. Should have the function signature
+            `callback(state: SamplerState) -> bool`. If `callback` returns `True`, the
+            sampling or hyperparameter optimization will end prematurely. `state`
+            is a named tuple containing these members:
+                - pipeline: The pipeline fitted in the previous iteration.
+                - score: The score of `pipeline`.
+                - nit: The number of iterations completed so far.
         
         Returns
         -------
@@ -125,11 +140,16 @@ class SKPlumber:
             metric=_metric,
             evaluator=evaluator,
             pipeline_timeout=pipeline_timeout,
+            callback=callback,
         )
 
-        logger.info(f"found best test score of {best_score}")
+        logger.info(f"found best validation score of {best_score}")
         logger.info("best pipeline:")
         logger.info(best_pipeline)
+
+        if tune:
+            logger.info("now tuning best found pipeline...")
+            ga_tune(best_pipeline, X, y, evaluator, _metric, print_every=1)
 
         # Now that we have the "best" model, train it on
         # the full dataset so it can see as much of the
