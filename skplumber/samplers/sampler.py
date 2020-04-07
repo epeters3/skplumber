@@ -50,7 +50,7 @@ class PipelineSampler(ABC):
         best_pipeline = None
 
         for i in range(1, num_samples + 1):
-            logger.info(f"sampling pipeline {i+1}/{num_samples}")
+            logger.info(f"sampling pipeline {i}/{num_samples}")
             pipeline = self.sample_pipeline(problem_type, models, transformers)
 
             try:
