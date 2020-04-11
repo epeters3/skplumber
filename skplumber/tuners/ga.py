@@ -21,6 +21,7 @@ from skplumber.primitives.parammeta import (
     CategoricalParamMeta,
 )
 from skplumber.utils import logger
+from skplumber.consts import OptimizationDirection
 
 
 def range_rule(lbound, ubound) -> float:
@@ -92,7 +93,6 @@ def ga_tune(
     """
     Performs a genetic algorithm hyperparameter tuning on `pipeline.`
     """
-    is_minimization_problem = metric.is_better_than(0.25, 0.5)
 
     def objective(*args, **flexga_params) -> float:
         """
@@ -102,7 +102,7 @@ def ga_tune(
         set_params_from_flexga(pipeline, flexga_params)
         score = evaluator(pipeline, X, y, metric)
         # The genetic algorithm tries to maximize
-        return -score if is_minimization_problem else score
+        return -score if metric.opt_dir == OptimizationDirection.MINIMIZE else score
 
     # Use flexga to find the best hyperparameter configuration it can.
     optimal_score, _, optimal_flexga_params = flexga(

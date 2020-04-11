@@ -10,6 +10,11 @@ class ProblemType(Enum):
         return value in set(item.value for item in cls)
 
 
+class OptimizationDirection(Enum):
+    MINIMIZE = 1
+    MAXIMIZE = 2
+
+
 class PrimitiveType(Enum):
     PREPROCESSOR = 1
     TRANSFORMER = 2
