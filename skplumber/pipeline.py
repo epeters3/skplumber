@@ -88,6 +88,10 @@ class Pipeline:
     def param_metas(self) -> t.Dict[int, t.Dict[str, ParamMeta]]:
         return {i: step.primitive.param_metas for i, step in enumerate(self.steps)}
 
+    @property
+    def num_params(self) -> int:
+        return sum(len(step.primitive.param_metas) for step in self.steps)
+
     def param_metas_with_data(
         self, X: pd.DataFrame
     ) -> t.Dict[int, t.Dict[str, ParamMeta]]:
