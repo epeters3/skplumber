@@ -14,9 +14,9 @@ pip install skplumber
 
 ### Usage
 
-#### `SKPlumber.crank`
+#### The `SKPlumber` AutoML System
 
-The top-level API of the package is the `SKPlumber` class. You instantiate the class, then use it's `crank` method to perform a search for an optimal machine learning (ML) pipeline, given your input data `x`, and `y` (a `pandas.DataFrame` and `pandas.Series` respectively). Here is an example using the classic iris dataset:
+The top-level API of the package is the `SKPlumber` class. You instantiate the class, then use it's `fit` method to perform a search for an optimal machine learning (ML) pipeline, given your input data `X`, and `y` (a `pandas.DataFrame` and `pandas.Series` respectively). Here is an example using the classic iris dataset:
 
 ```python
 from skplumber import SKPlumber
@@ -27,12 +27,13 @@ dataset = load_iris()
 X = pd.DataFrame(data=dataset["data"], columns=dataset["feature_names"])
 y = pd.Series(dataset["target"])
 
-plumber = SKPlumber()
-best_pipeline, best_score = plumber.crank(X, y, problem="classification")
-print(f"The best cross validated score the model found was: {best_score}")
+# Ask plumber to find the best machine learning pipeline it
+# can for the problem in 60 seconds.
+plumber = SKPlumber(problem="classification", budget=60)
+plumber.fit(X, y)
 
-# To use the best pipeline on unseen data:
-predictions = best_pipeline.predict(unseen_X)
+# To use the best found machine learning pipeline on unseen data:
+predictions = plumber.predict(unseen_X)
 ```
 
 #### `Pipeline`

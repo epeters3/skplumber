@@ -6,39 +6,37 @@ from skplumber.skplumber import SKPlumber
 
 class TestSKPlumber(TestCase):
     def test_args_are_validated(self) -> None:
-        plumber = SKPlumber()
-        X, y = load_dataset("iris")
-
         # metric should be valid
         with self.assertRaises(ValueError):
-            plumber.crank(X, y, problem="classification", metric="foobar")
+            SKPlumber("classification", 1, metric="foobar")
 
         # metric should be valid for problem type
         with self.assertRaises(ValueError):
-            plumber.crank(X, y, problem="classification", metric="rmse")
+            SKPlumber("classification", 1, metric="rmse")
 
         # problem type should be valid
         with self.assertRaises(Exception):
-            plumber.crank(X, y, problem="foobar")
+            SKPlumber("foobar", 1)
 
     def test_can_run(self) -> None:
-        plumber = SKPlumber()
         X, y = load_dataset("iris")
 
         # Should be able to run with the most basic configuration
-        plumber.crank(X, y, problem="classification", n=1)
+        plumber = SKPlumber("classification", 1)
+        plumber.fit(X, y)
 
         # Should be able to run using a non-default metric
-        plumber.crank(X, y, problem="classification", metric="f1macro", n=1)
+        plumber = SKPlumber("classification", 1, metric="f1macro")
+        plumber.fit(X, y)
 
     def test_can_take_callback(self) -> None:
         self.n_iters = 0
-        plumber = SKPlumber()
         X, y = load_dataset("iris")
 
         def cb(state) -> bool:
-            self.n_iters = state.nit
-            return True if state.nit == 2 else False
+            self.n_iters = state.n_iters
+            return True if state.n_iters == 2 else False
 
-        plumber.crank(X, y, problem="classification", n=10, callback=cb)
+        plumber = SKPlumber("classification", 100, callback=cb)
+        plumber.fit(X, y)
         assert self.n_iters < 3 and self.n_iters > 0

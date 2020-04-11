@@ -1,12 +1,12 @@
 import typing as t
+from time import time
 
 import pandas as pd
 from sklearn.utils import shuffle
 
 from skplumber.consts import ProblemType
-from skplumber.samplers.sampler import PipelineSampler
+from skplumber.samplers.sampler import PipelineSampler, SamplerState
 from skplumber.samplers.straight import StraightPipelineSampler
-from skplumber.pipeline import Pipeline
 from skplumber.primitives.primitive import Primitive
 from skplumber.primitives.sk_primitives.classifiers import classifiers
 from skplumber.primitives.sk_primitives.regressors import regressors
@@ -15,6 +15,7 @@ from skplumber.metrics import default_metrics, metrics
 from skplumber.utils import logger
 from skplumber.evaluators import make_train_test_evaluator
 from skplumber.tuners.ga import ga_tune
+from skplumber.progress import EVProgress
 
 
 class SKPlumber:
@@ -24,32 +25,24 @@ class SKPlumber:
         ProblemType.REGRESSION: list(regressors.values()),
     }
 
-    def crank(
+    def __init__(
         self,
-        X: pd.DataFrame,
-        y: pd.Series,
         problem: str,
+        budget: int,
         *,
         metric: str = None,
         sampler: PipelineSampler = None,
-        n: int = 10,
         evaluator: t.Callable = None,
         pipeline_timeout: t.Optional[int] = None,
-        tune: bool = False,
         callback: t.Optional[t.Callable] = None,
-    ) -> t.Tuple[Pipeline, float]:
+        # TODO: make True by default. Requires being able to control the
+        # amount of time it runs for (for tests and the budget)
+        tune: bool = False,
+        log_level: str = "INFO",
+    ) -> None:
         """
-        The main runtime method of the package. Given a dataset, problem type,
-        and sampling strategy, it tries to find, in a limited amount of time,
-        the best performing pipeline it can.
-
         Parameters
         ----------
-        X
-            The features of your dataset.
-        y
-            The target vector of your dataset. The indices of `X` and `y`
-            should match up.
         problem
             The type of problem you want to train this dataset for e.g.
             "classification". See the values of the `skplumber.consts.ProblemType`
@@ -64,8 +57,6 @@ class SKPlumber:
             types of pipelines to sample and try out on the problem. If `None`,
             the `skplumber.samplers.straight.StraightPipelineSampler` will be
             used with default arguments.
-        n
-            The number of pipelines to try out on the problem.
         evaluator
             The evaluation strategy to use to fit and score a pipeline to determine
             its performance. Must be a function with signature:
@@ -84,12 +75,12 @@ class SKPlumber:
             If no evaluator is provided, a default train/test split evaluation strategy
             will be used. `evaluator` will be used during both the sampling and
             hyperparameter tuning stages, if `tune==True`.
+        budget
+            How much time in seconds `fit` is allowed to search for a good solution.
         pipeline_timeout
-            The maximum number of seconds to spend evaluating any one pipeline.
-            If a sampled pipeline takes longer than this to evaluate, it will
-            be skipped.
-        tune
-            Whether to perform hyperparameter tuning on the best found pipeline.
+            If supplied, the maximum number of seconds to spend evaluating any
+            one pipeline. If a sampled pipeline takes longer than this to evaluate,
+            it will be skipped.
         callback
             Optional callback function. Will be called after each sampled pipeline
             is evaluated. Should have the function signature
@@ -98,63 +89,186 @@ class SKPlumber:
             is a named tuple containing these members:
                 - pipeline: The pipeline fitted in the previous iteration.
                 - score: The score of `pipeline`.
-                - nit: The number of iterations completed so far.
-        
-        Returns
-        -------
-        Pipeline
-            The best pipeline the search strategy was able to find.
-        float
-            The score of the best found pipeline.
+                - train_time: The number of seconds it took to train and
+                  evaluate `pipeline`.
+                - n_iters: The number of iterations completed so far.
+        tune
+            Whether to perform hyperparameter optimization on the best found pipeline.
+        log_level
+            Log level SKPlumber should use while running. Defaults to `"INFO"`.
         """
-        problem_type = ProblemType(problem)
+        logger.setLevel(log_level)
+
+        # Validate inputs
+
+        self.problem_type = ProblemType(problem)
 
         valid_metric_names = [
             name
-            for name, _metric in metrics.items()
-            if _metric.problem_type == problem_type
+            for name, met in metrics.items()
+            if met.problem_type == self.problem_type
         ]
+
         if metric is not None and metric not in valid_metric_names:
             raise ValueError(f"metric is invalid, must be one of {valid_metric_names}")
+
+        # Set defaults
+
         if metric is None:
-            _metric = default_metrics[problem_type]
+            self.metric = default_metrics[self.problem_type]
         else:
-            _metric = metrics[metric]
+            self.metric = metrics[metric]
+
+        if sampler is None:
+            self.sampler: PipelineSampler = StraightPipelineSampler()
+        else:
+            self.sampler = sampler
+
+        if evaluator is None:
+            self.evaluator = make_train_test_evaluator()
+        else:
+            self.evaluator = evaluator
+
+        # Set other members
+
+        self.budget = budget
+        self.pipeline_timeout = pipeline_timeout
+        self.tune = tune
+        self.progress = EVProgress(5, self.metric.opt_dir)
+        self.is_fitted = False
+        # Each hyperparameter tuning generation will
+        # have a population size equal to the number of
+        # hyerparameters on the pipeline being optimized
+        # times this value.
+        self.tuning_pop_size_factor = 10
+
+        self.sampler_cbs = [self._sampler_cb]
+        if callback:
+            self.sampler_cbs.append(callback)
+
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
+        """
+        The main runtime method of the package. Given a dataset, problem type,
+        and sampling strategy, it tries to find, in a limited amount of time,
+        the best performing pipeline it can.
+
+        Parameters
+        ----------
+        X
+            The features of your dataset.
+        y
+            The target vector of your dataset. The indices of `X` and `y`
+            should match up.
+        """
+
+        # Initialize
 
         if len(X.index) != y.size:
             raise ValueError(f"X and y must have the same number of instances")
 
-        if sampler is None:
-            sampler = StraightPipelineSampler()
+        # The time we need to finish fitting by
+        self.endtime = time() + self.budget
+        self.best_pipeline_min_tune_time = 0.0
+        self.best_score = self.metric.worst_value
 
-        if evaluator is None:
-            evaluator = make_train_test_evaluator()
+        # Run
 
-        best_pipeline, best_score = sampler.run(
+        self.progress.start()
+        best_pipeline, best_score = self.sampler.run(
             X,
             y,
-            num_samples=n,
-            models=self.models_map[problem_type],
+            models=self.models_map[self.problem_type],
             transformers=list(transformers.values()),
-            problem_type=problem_type,
-            metric=_metric,
-            evaluator=evaluator,
-            pipeline_timeout=pipeline_timeout,
-            callback=callback,
+            problem_type=self.problem_type,
+            metric=self.metric,
+            evaluator=self.evaluator,
+            pipeline_timeout=self.pipeline_timeout,
+            callback=self.sampler_cbs,
         )
+        self.best_pipeline = best_pipeline
+        self.best_score = best_score
 
         logger.info(f"found best validation score of {best_score}")
         logger.info("best pipeline:")
-        logger.info(best_pipeline)
+        logger.info(self.best_pipeline)
 
-        if tune:
+        if self.tune:
             logger.info("now tuning best found pipeline...")
-            ga_tune(best_pipeline, X, y, evaluator, _metric, print_every=1)
+            ga_tune(
+                self.best_pipeline,
+                X,
+                y,
+                self.evaluator,
+                self.metric,
+                population_size=(
+                    self.best_pipeline.num_params * self.tuning_pop_size_factor
+                ),
+                callback=self._tuner_callback,
+            )
 
         # Now that we have the "best" model, train it on
         # the full dataset so it can see as much of the
         # dataset's distribution as possible in an effort
         # to be more ready for the wild.
-        best_pipeline.fit(*shuffle(X, y))
+        self.best_pipeline.fit(*shuffle(X, y))
 
-        return best_pipeline, best_score
+        # Decomission temporary variables
+        del self.endtime
+        del self.best_pipeline_min_tune_time
+
+        # Fitting completed successfully
+        self.is_fitted = True
+
+    def predict(self, X: pd.DataFrame) -> pd.Series:
+        """
+        Makes a prediction for each instance in `X`, returning the predictions.
+        """
+        if not self.is_fitted:
+            raise ValueError(
+                "`SKPlumber.fit` must be called and finish "
+                "before `predict` can be called."
+            )
+        return self.best_pipeline.predict(X)
+
+    def _sampler_cb(self, state: SamplerState) -> bool:
+        # Decide how much time is left available to us in
+        # the sampling phase.
+        if self.tune:
+            # We want to leave enough time in the budget to be able
+            # to complete at least one generation of hyperparameter tuning.
+            if self.metric.is_better_than(state.score, self.best_score):
+                # An estimate of how long it will take to complete one
+                # generation of hyperparameter tuning on this current
+                # best pipeline.
+                self.best_pipeline_min_tune_time = (
+                    state.train_time
+                    * state.pipeline.num_params
+                    * self.tuning_pop_size_factor
+                )
+            sampling_endtime = self.endtime - self.best_pipeline_min_tune_time
+        else:
+            sampling_endtime = self.endtime
+
+        # Logic for tracking sampler progress and exiting when the cost
+        # of finding a new best score is too great.
+        self.progress.observe(state.score)
+        if self.progress.can_report:
+            now = time()
+            logger.info(
+                f"estimated time to new best: {self.progress.return_time:.2f} "
+                f"seconds ({sampling_endtime - now:.2f} left in sampling budget)"
+            )
+            if now + self.progress.return_time > sampling_endtime:  # type: ignore
+                logger.info(
+                    "not enough time is left in the budget "
+                    "to find a new best score, so exiting"
+                )
+                return True
+        return False
+
+    def _tuner_callback(self, state) -> bool:
+        logger.info(f"generation {state.nit} finished.")
+        logger.info(f"best score found so far: {state.fopt}")
+        logger.info(f"best hyperparameter config found so far: {state.kwargs_opt}")
+        # We need to quit early if our time budget is used up.
+        return True if time() > self.endtime else False

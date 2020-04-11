@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import typing as t
+from time import time
 
 import pandas as pd
 
@@ -13,7 +14,8 @@ from skplumber.utils import logger, conditional_timeout, EvaluationTimeoutError
 class SamplerState(t.NamedTuple):
     score: float
     pipeline: Pipeline
-    nit: int
+    train_time: float
+    n_iters: int
 
 
 class PipelineSampler(ABC):
@@ -22,14 +24,14 @@ class PipelineSampler(ABC):
         X: pd.DataFrame,
         y: pd.Series,
         *,
-        num_samples: int,
         models: t.List[t.Type[Primitive]],
         transformers: t.List[t.Type[Primitive]],
         problem_type: ProblemType,
         metric: Metric,
         evaluator: t.Callable,
         pipeline_timeout: t.Optional[int],
-        callback: t.Optional[t.Callable] = None,
+        num_samples: t.Optional[int] = None,
+        callback: t.Union[None, t.Callable, t.List[t.Callable]] = None,
     ) -> t.Tuple[Pipeline, float]:
         """
         Samples `num_samples` pipelines, returning the best one
@@ -42,20 +44,49 @@ class PipelineSampler(ABC):
         float
             The score of the best pipeline that was trained.
         """
-        if num_samples < 1:
+
+        # Validate inputs
+
+        if num_samples is None and callback is None:
+            raise ValueError(
+                "either num_samples or callback must be"
+                " passed so the sampler knows when to stop"
+            )
+
+        if num_samples is not None and num_samples < 1:
             raise ValueError(f"num_samples must be >= 1, got {num_samples}")
+
+        if callback is None:
+            callbacks: t.List[t.Callable] = []
+        elif callable(callback):
+            callbacks = [callback]
+        elif isinstance(callback, list):
+            callbacks = callback
+        else:
+            raise ValueError(f"unsupported type '{type(callback)}' for callback arg")
+
+        # Initialize
 
         should_timeout = pipeline_timeout is not None
         best_score = metric.worst_value
         best_pipeline = None
 
-        for i in range(1, num_samples + 1):
-            logger.info(f"sampling pipeline {i}/{num_samples}")
+        # Conduct the sampling
+
+        i = 1
+        while True:
+            logger.info(
+                f"sampling pipeline {i}{'/' + str(num_samples) if num_samples else ''}"
+            )
             pipeline = self.sample_pipeline(problem_type, models, transformers)
 
             try:
 
                 with conditional_timeout(pipeline_timeout, should_timeout):
+
+                    # Train the pipeline and check its performance.
+
+                    start_time = time()
                     test_score = evaluator(pipeline, X, y, metric)
                     logger.info(f"achieved test score: {test_score}")
 
@@ -66,24 +97,34 @@ class PipelineSampler(ABC):
                         best_score = test_score
                         best_pipeline = pipeline
 
+                    # Check to see if its time to stop sampling.
+
                     if callback is not None:
-                        exit_early = callback(SamplerState(test_score, pipeline, i))
+                        # We stop if any callback returns True.
+                        train_time = time() - start_time
+                        exit_early = any(
+                            cb(SamplerState(test_score, pipeline, train_time, i))
+                            for cb in callbacks
+                        )
                         if exit_early:
                             break
+
+                    if best_score == metric.best_value:
+                        logger.info(
+                            f"found best possible score {metric.best_value} early, "
+                            "stopping the search"
+                        )
+                        break
+
+                    if num_samples and i >= num_samples:
+                        break
 
             except EvaluationTimeoutError:
 
                 logger.info("pipeline took too long to evaluate, skipping")
                 logger.debug(pipeline)
 
-            finally:
-
-                if best_score == metric.best_value:
-                    logger.info(
-                        f"found best possible score {metric.best_value} early, "
-                        "stopping the search"
-                    )
-                    break
+            i += 1
 
         return best_pipeline, best_score
 
