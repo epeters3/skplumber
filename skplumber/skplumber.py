@@ -37,7 +37,9 @@ class SKPlumber:
         callback: t.Optional[t.Callable] = None,
         # TODO: make True by default. Requires being able to control the
         # amount of time it runs for (for tests and the budget)
+        block_size: int = 10,
         tune: bool = False,
+        tuning_mult_factor: int = 10,
         log_level: str = "INFO",
     ) -> None:
         """
@@ -92,8 +94,16 @@ class SKPlumber:
                 - train_time: The number of seconds it took to train and
                   evaluate `pipeline`.
                 - n_iters: The number of iterations completed so far.
+        block_size
+            The block size to take extrema from when using the block maxima approach
+            to calculate return times in the Generalized Extreme Value (GEV)
+            distribution fit to the pipeline sample results as the sampler progresses.
         tune
             Whether to perform hyperparameter optimization on the best found pipeline.
+        tuning_mult_factor
+            Each hyperparameter tuning generation will have a population size equal to
+            the number of hyerparameters on the pipeline being optimized times this
+            value.
         log_level
             Log level SKPlumber should use while running. Defaults to `"INFO"`.
         """
@@ -134,13 +144,9 @@ class SKPlumber:
         self.budget = budget
         self.pipeline_timeout = pipeline_timeout
         self.tune = tune
-        self.progress = EVProgress(5, self.metric.opt_dir)
+        self.progress = EVProgress(block_size, self.metric.opt_dir)
         self.is_fitted = False
-        # Each hyperparameter tuning generation will
-        # have a population size equal to the number of
-        # hyerparameters on the pipeline being optimized
-        # times this value.
-        self.tuning_pop_size_factor = 10
+        self.tuning_mult_factor = tuning_mult_factor
 
         self.sampler_cbs = [self._sampler_cb]
         if callback:
@@ -167,7 +173,8 @@ class SKPlumber:
             raise ValueError(f"X and y must have the same number of instances")
 
         # The time we need to finish fitting by
-        self.endtime = time() + self.budget
+        self.starttime = time()
+        self.endtime = self.starttime + self.budget
         self.best_pipeline_min_tune_time = 0.0
         self.best_score = self.metric.worst_value
 
@@ -193,7 +200,9 @@ class SKPlumber:
         logger.info(self.best_pipeline)
 
         if self.tune:
-            logger.info("now tuning best found pipeline...")
+            logger.info(
+                "now performing hyperparameter tuning on best found pipeline..."
+            )
             ga_tune(
                 self.best_pipeline,
                 X,
@@ -201,7 +210,7 @@ class SKPlumber:
                 self.evaluator,
                 self.metric,
                 population_size=(
-                    self.best_pipeline.num_params * self.tuning_pop_size_factor
+                    self.best_pipeline.num_params * self.tuning_mult_factor
                 ),
                 callback=self._tuner_callback,
             )
@@ -212,7 +221,12 @@ class SKPlumber:
         # to be more ready for the wild.
         self.best_pipeline.fit(*shuffle(X, y))
 
+        logger.info(
+            f"finished. total execution time: {time() - self.starttime:.2f} seconds."
+        )
+
         # Decomission temporary variables
+        del self.starttime
         del self.endtime
         del self.best_pipeline_min_tune_time
 
@@ -237,13 +251,14 @@ class SKPlumber:
             # We want to leave enough time in the budget to be able
             # to complete at least one generation of hyperparameter tuning.
             if self.metric.is_better_than(state.score, self.best_score):
+                self.best_score = state.score
                 # An estimate of how long it will take to complete one
                 # generation of hyperparameter tuning on this current
                 # best pipeline.
                 self.best_pipeline_min_tune_time = (
                     state.train_time
                     * state.pipeline.num_params
-                    * self.tuning_pop_size_factor
+                    * self.tuning_mult_factor
                 )
             sampling_endtime = self.endtime - self.best_pipeline_min_tune_time
         else:
@@ -260,15 +275,19 @@ class SKPlumber:
             )
             if now + self.progress.return_time > sampling_endtime:  # type: ignore
                 logger.info(
-                    "not enough time is left in the budget "
-                    "to find a new best score, so exiting"
+                    "not enough time is left in the budget to find a new "
+                    "best score, so no more sampling will be done"
                 )
                 return True
         return False
 
-    def _tuner_callback(self, state) -> bool:
-        logger.info(f"generation {state['nit']} finished.")
-        logger.info(f"best score found so far: {state['fopt']}")
+    def _tuner_callback(self, state: dict) -> bool:
+        now = time()
+        logger.info(
+            f"generation {state['nit']} finished. "
+            f"{self.endtime - now:.2f} seconds remaining in budget."
+        )
+        logger.info(f"best score found so far: {state['fun']}")
         logger.info(f"best hyperparameter config found so far: {state['kwargs_opt']}")
         # We need to quit early if our time budget is used up.
         return True if time() > self.endtime else False
