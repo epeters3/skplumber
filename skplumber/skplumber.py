@@ -267,8 +267,8 @@ class SKPlumber:
         return False
 
     def _tuner_callback(self, state) -> bool:
-        logger.info(f"generation {state.nit} finished.")
-        logger.info(f"best score found so far: {state.fopt}")
-        logger.info(f"best hyperparameter config found so far: {state.kwargs_opt}")
+        logger.info(f"generation {state['nit']} finished.")
+        logger.info(f"best score found so far: {state['fopt']}")
+        logger.info(f"best hyperparameter config found so far: {state['kwargs_opt']}")
         # We need to quit early if our time budget is used up.
         return True if time() > self.endtime else False
