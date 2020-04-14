@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="skplumber",
-    version="0.6.0dev",
+    version="0.6.1dev",
     packages=find_packages(include=["skplumber", "skplumber.*"]),
     license="MIT",
     url="https://github.com/epeters3/skplumber",
