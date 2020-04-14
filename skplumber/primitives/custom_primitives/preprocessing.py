@@ -9,8 +9,8 @@ from skplumber.consts import PrimitiveType
 
 class OneHotEncoder(Primitive):
     """
-    One-hot encodes any `object` or `category` columns. If the number of
-    unique values is large, it just encodes the most common ones. NaN values
+    One-hot encodes any `object` or category` columns. If the number of
+    unique values is large, it just encodes the most common ones. `nan` values
     are not encoded. This primitive is heavily inspired by USC ISI's DSBOX
     encoder primitive used in the D3M ecosystem. See:
     https://github.com/usc-isi-i2/dsbox-primitives

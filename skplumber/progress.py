@@ -32,9 +32,9 @@ class EVProgress:
         """
         Parameters
         ----------
-        block_size:
+        block_size : int
             The number of observations to take a sample maximum from.
-        extremum:
+        extremum : OptimizationDirection
             Whether to keep track of the
             maximum or minimum values of the observations and fit
             a GEV model to that.

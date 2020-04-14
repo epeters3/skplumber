@@ -15,12 +15,12 @@ class PrimitiveStep:
         """
         Parameters
         ----------
-        primitive_cls
+        primitive_cls : class inheriting Primitive
             The primitive class this step is associated with.
-        inputs
+        inputs : list of int
             The indices of the pipeline steps for whose output
             this step will use as its input.
-        params
+        params : kwargs
             Any hyperparameters to set in the primitive.
         """
         self.primitive = primitive_cls(**params)
@@ -108,7 +108,7 @@ class Pipeline:
         params = pipeline.get_params()
         params[0]["criterion"]
         ```
-        That yields the value of the "criterion" param of
+        That yields the value of the `"criterion"` param of
         the 0th step in the pipeline.
         """
         return {i: step.primitive.get_params() for i, step in enumerate(self.steps)}
@@ -116,7 +116,7 @@ class Pipeline:
     def set_params(self, params: t.Dict[int, t.Dict[str, t.Any]]) -> None:
         """
         Sets any tunable hyperparameters on one or more steps in the
-        pipeline. E.g. to set the "criterion" param of the 0th step:
+        pipeline. E.g. to set the `"criterion"` param of the 0th step:
         ```
         pipeline.set_params({0: {"criterion": "gini"}})
         ```
@@ -133,9 +133,9 @@ class Pipeline:
         
         Parameters
         ----------
-        X
+        X : pandas.DataFrame
             The dataframe of features.
-        y
+        y : pandas.Series
             The series of targets to learn to predict.
         """
         self._run(X, y, fit=True)

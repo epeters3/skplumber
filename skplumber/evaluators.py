@@ -75,7 +75,7 @@ def make_down_sample_evaluator(
 
     Parameters
     ----------
-    sample_ratio
+    sample_ratio : float
         The ratio of the data to conduct the train/test
         evaluation on.
     """

@@ -45,21 +45,23 @@ class SKPlumber:
         """
         Parameters
         ----------
-        problem
+        problem : str
             The type of problem you want to train this dataset for e.g.
             "classification". See the values of the `skplumber.consts.ProblemType`
             enum for a list of valid options.
-        metric
+        budget : int
+            How much time in seconds `fit` is allowed to search for a good solution.
+        metric : Metric, optional
             The type of metric you want to score the pipeline predictions with.
             See the keys of the `skplumber.metrics.metrics` dict for a list of
             valid options. If `None`, a default metric will be used.
-        sampler
+        sampler : PipelineSampler, optional
             An instance of a class inheriting from
             `skplumber.samplers.sampler.PipelineSampler`. Used to decide what
             types of pipelines to sample and try out on the problem. If `None`,
             the `skplumber.samplers.straight.StraightPipelineSampler` will be
             used with default arguments.
-        evaluator
+        evaluator : function, optional
             The evaluation strategy to use to fit and score a pipeline to determine
             its performance. Must be a function with signature:
             ```
@@ -77,13 +79,11 @@ class SKPlumber:
             If no evaluator is provided, a default train/test split evaluation strategy
             will be used. `evaluator` will be used during both the sampling and
             hyperparameter tuning stages, if `tune==True`.
-        budget
-            How much time in seconds `fit` is allowed to search for a good solution.
-        pipeline_timeout
+        pipeline_timeout : int, optional
             If supplied, the maximum number of seconds to spend evaluating any
             one pipeline. If a sampled pipeline takes longer than this to evaluate,
             it will be skipped.
-        callback
+        callback : function, optional
             Optional callback function. Will be called after each sampled pipeline
             is evaluated. Should have the function signature
             `callback(state: SamplerState) -> bool`. If `callback` returns `True`, the
@@ -94,17 +94,17 @@ class SKPlumber:
                 - train_time: The number of seconds it took to train and
                   evaluate `pipeline`.
                 - n_iters: The number of iterations completed so far.
-        block_size
+        block_size : int, optional
             The block size to take extrema from when using the block maxima approach
             to calculate return times in the Generalized Extreme Value (GEV)
             distribution fit to the pipeline sample results as the sampler progresses.
-        tune
+        tune : bool, optional
             Whether to perform hyperparameter optimization on the best found pipeline.
-        tuning_mult_factor
+        tuning_mult_factor : int, optional
             Each hyperparameter tuning generation will have a population size equal to
             the number of hyerparameters on the pipeline being optimized times this
             value.
-        log_level
+        log_level : {'INFO', 'DEBUG', 'NOTEST', 'WARNING', 'ERROR', 'CRITICAL'}, optional
             Log level SKPlumber should use while running. Defaults to `"INFO"`.
         """
         logger.setLevel(log_level)
@@ -160,9 +160,9 @@ class SKPlumber:
 
         Parameters
         ----------
-        X
+        X : pandas.DataFrame
             The features of your dataset.
-        y
+        y : pandas.Series
             The target vector of your dataset. The indices of `X` and `y`
             should match up.
         """

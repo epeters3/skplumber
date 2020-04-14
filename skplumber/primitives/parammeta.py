@@ -72,7 +72,7 @@ class CategoricalParamMeta(ParamMeta):
         """
         Parameters
         ----------
-        options
+        options : iterable object
             The options that this hyperparameter can take on.
         """
         self.options = set(options)

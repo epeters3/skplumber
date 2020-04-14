@@ -23,27 +23,27 @@ class Metric:
         """
         Parameters
         ----------
-        name
+        name : str
             The name of this metric e.g. "RMSE", or "Accuracy".
-        problem_type
+        problem_type : ProblemType
             The problem type this metric is used to asses e.g.
             Regression for RMSE or Classification for Accuracy.
-        compute
+        compute : function
             The method that actually computes the score between the
             truth `y` and the `predictions`.
-        opt_dir
+        opt_dir : OptimizationDirection
             The direction an optimizer would go to improve this metric e.g.
             for RMSE the goal is to minimize. For accuracy, the goal is to
             maximize.
-        is_better_than
+        is_better_than : function
             Should return `True` if the first arg (a) is better than the
             second arg (b) in regards to this metric. E.g. if this metric were
             RMSE, `a=25`, and second `b=30`, then this method would
             return `True`.
-        best_value
+        best_value : float
             The value a perfect model would get under this metric e.g. for
             accuracy it would be 1.0.
-        worst_value
+        worst_value : float
             The worst value a model could achieve for this metric e.g. for
             accuracy it would be 0.0.
         """

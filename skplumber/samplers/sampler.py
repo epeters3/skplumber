@@ -39,9 +39,9 @@ class PipelineSampler(ABC):
         
         Returns
         -------
-        Pipeline
+        best_pipeline : Pipeline
             The fitted best pipeline trained on the problem.
-        float
+        best_score : float
             The score of the best pipeline that was trained.
         """
 
