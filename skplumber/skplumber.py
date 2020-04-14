@@ -209,7 +209,7 @@ class SKPlumber:
             logger.info(
                 "now performing hyperparameter tuning on best found pipeline..."
             )
-            ga_tune(
+            best_tuning_score, best_tuning_params = ga_tune(
                 self.best_pipeline,
                 X,
                 y,
@@ -221,6 +221,11 @@ class SKPlumber:
                 ),
                 callback=self._tuner_callback,
             )
+            if self.metric.is_better_than(best_tuning_score, self.best_score):
+                # The hyperparameter tuning was able to find an
+                # improvement.
+                self.best_score = best_tuning_score
+                self.best_pipeline.set_params(best_tuning_params)
 
         # Now that we have the "best" model, train it on
         # the full dataset so it can see as much of the

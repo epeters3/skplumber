@@ -1,5 +1,6 @@
 import typing as t
 from collections import defaultdict
+import copy
 
 import pandas as pd
 from flexga import flexga
@@ -69,17 +70,17 @@ def get_flexga_metas(pipeline: Pipeline, X: pd.DataFrame) -> t.Dict[str, ArgMeta
     return kwargsmeta
 
 
-def set_params_from_flexga(pipeline: Pipeline, flexga_params: dict) -> None:
+def get_params_from_flexga(flexga_params: dict) -> t.Dict[int, t.Dict[str, t.Any]]:
     """
     Converts flexga's flattened param dictionary to the nested
-    dictionary `pipeline` uses, finally setting them on `pipeline`.
+    dictionary `pipeline` uses.
     """
     params: t.Dict[int, t.Dict[str, t.Any]] = defaultdict(dict)
     for flexga_key, value in flexga_params.items():
         i, key = flexga_key.split(",")
         i = int(i)
         params[i][key] = value
-    pipeline.set_params(params)
+    return params
 
 
 def ga_tune(
@@ -90,20 +91,25 @@ def ga_tune(
     metric: Metric,
     exit_on_pipeline_error: bool = True,
     **flexgakwargs,
-) -> float:
+) -> t.Tuple[float, t.Dict[int, t.Dict[str, t.Any]]]:
     """
-    Performs a genetic algorithm hyperparameter tuning on `pipeline.`
+    Performs a genetic algorithm hyperparameter tuning on a copy of
+    `pipeline`, returning the best score it could find and the
+    hyperparameter configuration for that best score, so the user
+    can decide to use it if they want.
     """
+    pipeline_to_tune = copy.deepcopy(pipeline)
 
     def objective(*args, **flexga_params) -> float:
         """
         The objective function the genetic algorithm will
         try to maximize.
         """
-        set_params_from_flexga(pipeline, flexga_params)
+        params = get_params_from_flexga(flexga_params)
+        pipeline_to_tune.set_params(params)
 
         try:
-            score = evaluator(pipeline, X, y, metric)
+            score = evaluator(pipeline_to_tune, X, y, metric)
         except PipelineRunError as e:
             logger.exception(e)
             if exit_on_pipeline_error:
@@ -117,12 +123,9 @@ def ga_tune(
 
     # Use flexga to find the best hyperparameter configuration it can.
     optimal_score, _, optimal_flexga_params = flexga(
-        objective, kwargsmeta=get_flexga_metas(pipeline, X), **flexgakwargs
+        objective, kwargsmeta=get_flexga_metas(pipeline_to_tune, X), **flexgakwargs
     )
-    # Use that best found hyperparameter configuration.
-    set_params_from_flexga(pipeline, optimal_flexga_params)
-    # Fit the pipeline on all the data using that configuration
-    pipeline.fit(X, y)
-    logger.info(f"tuning complete for pipeline {pipeline}")
+    optimal_params = get_params_from_flexga(optimal_flexga_params)
+    logger.info(f"tuning complete for pipeline {pipeline_to_tune}")
     logger.info(f"found best validation score of {optimal_score}")
-    return optimal_score
+    return optimal_score, optimal_params
