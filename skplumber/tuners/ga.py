@@ -20,7 +20,7 @@ from skplumber.primitives.parammeta import (
     BoolParamMeta,
     CategoricalParamMeta,
 )
-from skplumber.utils import logger
+from skplumber.utils import logger, PipelineRunError
 from skplumber.consts import OptimizationDirection
 
 
@@ -88,6 +88,7 @@ def ga_tune(
     y: pd.Series,
     evaluator: t.Callable,
     metric: Metric,
+    exit_on_pipeline_error: bool = True,
     **flexgakwargs,
 ) -> float:
     """
@@ -100,7 +101,17 @@ def ga_tune(
         try to maximize.
         """
         set_params_from_flexga(pipeline, flexga_params)
-        score = evaluator(pipeline, X, y, metric)
+
+        try:
+            score = evaluator(pipeline, X, y, metric)
+        except PipelineRunError as e:
+            logger.exception(e)
+            if exit_on_pipeline_error:
+                raise e
+            # Pipelines that make errors are bad.
+            # TODO: make this `None` or `np.nan` instead.
+            score = metric.worst_value
+
         # The genetic algorithm tries to maximize
         return -score if metric.opt_dir == OptimizationDirection.MINIMIZE else score
 

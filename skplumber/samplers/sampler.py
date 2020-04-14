@@ -8,7 +8,12 @@ from skplumber.primitives.primitive import Primitive
 from skplumber.pipeline import Pipeline
 from skplumber.consts import ProblemType
 from skplumber.metrics import Metric
-from skplumber.utils import logger, conditional_timeout, EvaluationTimeoutError
+from skplumber.utils import (
+    logger,
+    conditional_timeout,
+    EvaluationTimeoutError,
+    PipelineRunError,
+)
 
 
 class SamplerState(t.NamedTuple):
@@ -32,10 +37,9 @@ class PipelineSampler(ABC):
         pipeline_timeout: t.Optional[int],
         num_samples: t.Optional[int] = None,
         callback: t.Union[None, t.Callable, t.List[t.Callable]] = None,
+        exit_on_pipeline_error: bool = True,
     ) -> t.Tuple[Pipeline, float]:
-        """
-        Samples `num_samples` pipelines, returning the best one
-        found along the way.
+        """Samples `num_samples` pipelines, returning the best one found along the way.
         
         Returns
         -------
@@ -123,6 +127,12 @@ class PipelineSampler(ABC):
 
                 logger.info("pipeline took too long to evaluate, skipping")
                 logger.debug(pipeline)
+
+            except PipelineRunError as e:
+
+                logger.exception(e)
+                if exit_on_pipeline_error:
+                    raise e
 
             i += 1
 

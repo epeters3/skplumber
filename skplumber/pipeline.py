@@ -8,6 +8,7 @@ from skplumber.primitives.custom_primitives.preprocessing import (
     RandomImputer,
 )
 from skplumber.primitives.parammeta import ParamMeta
+from skplumber.utils import PipelineRunError
 
 
 class PrimitiveStep:
@@ -56,33 +57,37 @@ class Pipeline:
     def _run(
         self, X: pd.DataFrame, y: t.Optional[pd.Series], *, fit: bool,
     ) -> pd.DataFrame:
-        all_step_outputs: t.List[pd.DataFrame] = []
+        try:
+            if fit and y is None:
+                raise ValueError("`y` cannot be `None` when fitting a pipeline")
+            all_step_outputs: t.List[pd.DataFrame] = []
 
-        for step_i, step in enumerate(self.steps):
-            if step_i == 0:
-                step_inputs = X
-            else:
-                step_inputs = pd.concat(
-                    [all_step_outputs[i] for i in step.inputs], axis=1
+            for step_i, step in enumerate(self.steps):
+                if step_i == 0:
+                    step_inputs = X
+                else:
+                    step_inputs = pd.concat(
+                        [all_step_outputs[i] for i in step.inputs], axis=1
+                    )
+                if fit:
+                    step.primitive.fit(step_inputs, y)
+                step_outputs = step.primitive.produce(step_inputs)
+                if isinstance(step_outputs, pd.Series) and step_i < len(self.steps) - 1:
+                    # Every step's output but the last step must be a dataframe, since
+                    # it might be used as the `X` input for a future step.
+                    step_outputs = pd.DataFrame({"output": step_outputs})
+                all_step_outputs.append(step_outputs)
+
+            final_predictions = all_step_outputs[-1]
+            if not isinstance(final_predictions, pd.Series):
+                raise ValueError(
+                    f"final pipeline step {self.steps[-1].primitive} "
+                    "did not output a pandas Series"
                 )
-            if fit:
-                if y is None:
-                    raise ValueError("`y` cannot be `None` when fitting a pipeline")
-                step.primitive.fit(step_inputs, y)
-            step_outputs = step.primitive.produce(step_inputs)
-            if isinstance(step_outputs, pd.Series) and step_i < len(self.steps) - 1:
-                # Every step's output but the last step must be a dataframe, since it
-                # might be used as the `X` input for a future step.
-                step_outputs = pd.DataFrame({"output": step_outputs})
-            all_step_outputs.append(step_outputs)
+            return final_predictions
 
-        final_predictions = all_step_outputs[-1]
-        if not isinstance(final_predictions, pd.Series):
-            raise ValueError(
-                f"final pipeline step {self.steps[-1].primitive} "
-                "did not output a pandas Series"
-            )
-        return final_predictions
+        except Exception as e:
+            raise PipelineRunError from e
 
     @property
     def param_metas(self) -> t.Dict[int, t.Dict[str, ParamMeta]]:

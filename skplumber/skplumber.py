@@ -34,6 +34,7 @@ class SKPlumber:
         sampler: PipelineSampler = None,
         evaluator: t.Callable = None,
         pipeline_timeout: t.Optional[int] = None,
+        exit_on_pipeline_error: bool = True,
         callback: t.Optional[t.Callable] = None,
         # TODO: make True by default. Requires being able to control the
         # amount of time it runs for (for tests and the budget)
@@ -83,6 +84,9 @@ class SKPlumber:
             If supplied, the maximum number of seconds to spend evaluating any
             one pipeline. If a sampled pipeline takes longer than this to evaluate,
             it will be skipped.
+        exit_on_pipeline_error : bool, optional
+            Whether to exit if a specific pipeline errors out while training. If
+            `False`, the pipeline will just be skipped and `SKPlumber` will continue.
         callback : function, optional
             Optional callback function. Will be called after each sampled pipeline
             is evaluated. Should have the function signature
@@ -147,6 +151,7 @@ class SKPlumber:
         self.progress = EVProgress(block_size, self.metric.opt_dir)
         self.is_fitted = False
         self.tuning_mult_factor = tuning_mult_factor
+        self.exit_on_pipeline_error = exit_on_pipeline_error
 
         self.sampler_cbs = [self._sampler_cb]
         if callback:
@@ -191,6 +196,7 @@ class SKPlumber:
             evaluator=self.evaluator,
             pipeline_timeout=self.pipeline_timeout,
             callback=self.sampler_cbs,
+            exit_on_pipeline_error=self.exit_on_pipeline_error,
         )
         self.best_pipeline = best_pipeline
         self.best_score = best_score
@@ -209,6 +215,7 @@ class SKPlumber:
                 y,
                 self.evaluator,
                 self.metric,
+                self.exit_on_pipeline_error,
                 population_size=(
                     self.best_pipeline.num_params * self.tuning_mult_factor
                 ),

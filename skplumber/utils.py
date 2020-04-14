@@ -15,6 +15,10 @@ class EvaluationTimeoutError(Exception):
     pass
 
 
+class PipelineRunError(Exception):
+    pass
+
+
 class conditional_timeout:
     """
     Can be used to exit a function if it's taking too long. E.g.
