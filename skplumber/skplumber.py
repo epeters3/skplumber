@@ -236,6 +236,7 @@ class SKPlumber:
         logger.info(
             f"finished. total execution time: {time() - self.starttime:.2f} seconds."
         )
+        logger.info(f"final best score found: {self.best_score}")
 
         # Decomission temporary variables
         del self.starttime

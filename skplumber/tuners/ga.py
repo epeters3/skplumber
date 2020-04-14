@@ -126,6 +126,8 @@ def ga_tune(
         objective, kwargsmeta=get_flexga_metas(pipeline_to_tune, X), **flexgakwargs
     )
     optimal_params = get_params_from_flexga(optimal_flexga_params)
-    logger.info(f"tuning complete for pipeline {pipeline_to_tune}")
+    pipeline_to_tune.set_params(optimal_params)
+    logger.info("tuning complete.")
+    logger.info(f"found best pipeline configuration: {pipeline_to_tune}")
     logger.info(f"found best validation score of {optimal_score}")
     return optimal_score, optimal_params
