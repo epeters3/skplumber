@@ -271,28 +271,39 @@ class SKPlumber:
         else:
             sampling_endtime = self.endtime
 
+        now = time()
+        logger.info(f"{sampling_endtime - now:.2f} seconds left in sampling budget")
+
         # Logic for tracking sampler progress and exiting when the cost
         # of finding a new best score is too great.
         self.progress.observe(state.score)
-        if self.progress.can_report:
-            now = time()
+
+        exit_early = False
+        if now > sampling_endtime:
+
+            exit_early = True
+
+        elif self.progress.can_report:
+
             logger.info(
-                f"estimated time to new best: {self.progress.return_time:.2f} "
-                f"seconds ({sampling_endtime - now:.2f} left in sampling budget)"
+                f"estimated time to new best: {self.progress.return_time:.2f} seconds"
             )
             if now + self.progress.return_time > sampling_endtime:  # type: ignore
-                logger.info(
-                    "not enough time is left in the budget to find a new "
-                    "best score, so no more sampling will be done"
-                )
-                return True
-        return False
+                exit_early = True
+
+        if exit_early:
+            logger.info(
+                "not enough time is left in the budget to find a new "
+                "best score, so no more sampling will be done"
+            )
+
+        return exit_early
 
     def _tuner_callback(self, state: dict) -> bool:
         now = time()
         logger.info(
-            f"generation {state['nit']} finished. "
-            f"{self.endtime - now:.2f} seconds remaining in budget."
+            f"candidate pipeline in generation {state['nit']} finished. "
+            f"{self.endtime - now:.2f} seconds left in budget."
         )
         logger.info(f"best score found so far: {state['fun']}")
         logger.info(f"best hyperparameter config found so far: {state['kwargs_opt']}")
