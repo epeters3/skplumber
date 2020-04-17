@@ -1,6 +1,6 @@
 # skplumber
 
-[![Build Status](https://travis-ci.org/epeters3/skplumber.svg?branch=master)](https://travis-ci.org/epeters3/skplumber)
+[![Build Status](https://travis-ci.com/epeters3/skplumber.svg?branch=master)](https://travis-ci.com/github/epeters3/skplumber)
 
 ```
        ______         ______                 ______
