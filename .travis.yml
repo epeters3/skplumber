@@ -2,10 +2,10 @@ language: python
 install:
   - python setup.py install
   - pip install pdoc3
+  - pdoc --html --output-dir docs skplumber
   - rm -r skplumber
 script:
   - nosetests -s -v
-  - pdoc --html --output-dir docs skplumber
 deploy:
   provider: pages
   skip_cleanup: true
