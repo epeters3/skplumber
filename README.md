@@ -1,5 +1,3 @@
-# skplumber
-
 [![Build Status](https://travis-ci.com/epeters3/skplumber.svg?branch=master)](https://travis-ci.com/github/epeters3/skplumber)
 
 ```
