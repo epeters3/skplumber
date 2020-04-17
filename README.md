@@ -11,7 +11,12 @@ _(__  )_  ,<  __  /_/ /  / / /_/ /_  / / / / /  /_/ /  __/  /
               /_/
 ```
 
-A package for automatically sampling, training, and scoring machine learning pipelines on classification or regression problems. The base constructs (pipelines, primitives, etc.) take heavily from the [Data Driven Discovery of Models (D3M)](https://docs.datadrivendiscovery.org/) core package.
+`skplumber` is a Machine Learning (ML) package with two core things to offer:
+
+- An **Automated Machine Learning (AutoML) system** for automatically sampling, training, scoring, and tuning machine learning pipelines on classification or regression problems. This is available as the `skplumber.SKPlumber` class.
+- A **lightweight ML framework** for composing ML primitives into pipelines (`skplumber.Pipeline`) of arbitrary shape, and for training and fitting those pipelines using various evaluation techniques (e.g. train/test split, k-fold cross validation, and down-sampling). Also, all primitive hyperparameters come pre-annotated with types and range information so hyperparameters can be more easily interacted with. Additionally, an existing hyperparameter tuning technique is provided by `skplumber.ga_tune`.
+
+The base pipeline and primitive constructs take heavily from the same constructs as they exist in the [Data Driven Discovery of Models (D3M)](https://docs.datadrivendiscovery.org/) core package.
 
 API documentation for the project is located [here](https://epeters3.github.io/skplumber/).
 
