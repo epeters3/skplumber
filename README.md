@@ -11,7 +11,7 @@ _(__  )_  ,<  __  /_/ /  / / /_/ /_  / / / / /  /_/ /  __/  /
               /_/
 ```
 
-`skplumber` is a Machine Learning (ML) package with two core things to offer:
+skplumber is a Machine Learning (ML) package with two core things to offer:
 
 - An **Automated Machine Learning (AutoML) system** for automatically sampling, training, scoring, and tuning machine learning pipelines on classification or regression problems. This is available as the `skplumber.skplumber.SKPlumber` class.
 - A **lightweight ML framework** for composing ML primitives into pipelines (`skplumber.pipeline.Pipeline`) of arbitrary shape, and for training and fitting those pipelines using various evaluation techniques (e.g. train/test split, k-fold cross validation, and down-sampling). Also, all primitive hyperparameters come pre-annotated with types and range information so hyperparameters can be more easily interacted with. Additionally, an existing hyperparameter tuning technique is provided by `skplumber.tuners.ga.ga_tune`.
