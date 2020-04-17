@@ -21,7 +21,7 @@
 </header>
 <section id="section-intro">
 <h1 id="skplumber">skplumber</h1>
-<p><a href="https://travis-ci.org/epeters3/skplumber"><img alt="Build Status" src="https://travis-ci.org/epeters3/skplumber.svg?branch=master"></a></p>
+<p><a href="https://travis-ci.com/github/epeters3/skplumber"><img alt="Build Status" src="https://travis-ci.com/epeters3/skplumber.svg?branch=master"></a></p>
 <pre><code>       ______         ______                 ______
 __________  /____________  /___  ________ ______  /______________
 __  ___/_  //_/__  __ \_  /_  / / /_  __ `__ \_  __ \  _ \_  ___/
@@ -41,7 +41,7 @@ _(__  )_  ,&lt;  __  /_/ /  / / /_/ /_  / / / / /  /_/ /  __/  /
 </code></pre>
 <h2 id="usage">Usage</h2>
 <h3 id="the-skplumber-automl-system">The <code>SKPlumber</code> AutoML System</h3>
-<p>The top-level API of the package is the <code>SKPlumber</code> class. You instantiate the class, then use it's <code>fit</code> method to perform a search for an optimal machine learning (ML) pipeline, given your input data <code>X</code>, and <code>y</code> (a <code>pandas.DataFrame</code> and <code>pandas.Series</code> respectively). Here is an example using the classic iris dataset:</p>
+<p>The top-level API of the package is the <code><a title="skplumber.skplumber.SKPlumber" href="skplumber.html#skplumber.skplumber.SKPlumber">SKPlumber</a></code> class. You instantiate the class, then use it's <code>fit</code> method to perform a search for an optimal machine learning (ML) pipeline, given your input data <code>X</code>, and <code>y</code> (a <code>pandas.DataFrame</code> and <code>pandas.Series</code> respectively). Here is an example using the classic iris dataset:</p>
 <pre><code class="python">from skplumber import SKPlumber
 import pandas as pd
 from sklearn.datasets import load_iris
@@ -59,7 +59,7 @@ plumber.fit(X, y)
 predictions = plumber.predict(unseen_X)
 </code></pre>
 <h3 id="pipeline"><code>Pipeline</code></h3>
-<p>The <code>Pipeline</code> class is a slightly lower level API for the package that can be used to build, fit, and predict arbitrarily shaped machine learning pipelines. For example, we can create a basic single level stacking pipeline, where the output from predictors are fed into another predictor to ensemble in a learned way:</p>
+<p>The <code><a title="skplumber.pipeline.Pipeline" href="pipeline.html#skplumber.pipeline.Pipeline">Pipeline</a></code> class is a slightly lower level API for the package that can be used to build, fit, and predict arbitrarily shaped machine learning pipelines. For example, we can create a basic single level stacking pipeline, where the output from predictors are fed into another predictor to ensemble in a learned way:</p>
 <pre><code class="python">from skplumber import Pipeline
 from skplumber.primitives import transformers, classifiers
 import pandas as pd
