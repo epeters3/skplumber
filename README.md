@@ -2,19 +2,26 @@
 
 [![Build Status](https://travis-ci.org/epeters3/skplumber.svg?branch=master)](https://travis-ci.org/epeters3/skplumber)
 
+```
+       ______         ______                 ______
+__________  /____________  /___  ________ ______  /______________
+__  ___/_  //_/__  __ \_  /_  / / /_  __ `__ \_  __ \  _ \_  ___/
+_(__  )_  ,<  __  /_/ /  / / /_/ /_  / / / / /  /_/ /  __/  /
+/____/ /_/|_| _  .___//_/  \__,_/ /_/ /_/ /_//_.___/\___//_/
+              /_/
+```
+
 A package for automatically sampling, training, and scoring machine learning pipelines on classification or regression problems. The base constructs (pipelines, primitives, etc.) take heavily from the [Data Driven Discovery of Models (D3M)](https://docs.datadrivendiscovery.org/) core package.
 
-## Getting Started
-
-### Installation
+## Installation
 
 ```shell
 pip install skplumber
 ```
 
-### Usage
+## Usage
 
-#### The `SKPlumber` AutoML System
+### The `SKPlumber` AutoML System
 
 The top-level API of the package is the `SKPlumber` class. You instantiate the class, then use it's `fit` method to perform a search for an optimal machine learning (ML) pipeline, given your input data `X`, and `y` (a `pandas.DataFrame` and `pandas.Series` respectively). Here is an example using the classic iris dataset:
 
@@ -36,7 +43,7 @@ plumber.fit(X, y)
 predictions = plumber.predict(unseen_X)
 ```
 
-#### `Pipeline`
+### `Pipeline`
 
 The `Pipeline` class is a slightly lower level API for the package that can be used to build, fit, and predict arbitrarily shaped machine learning pipelines. For example, we can create a basic single level stacking pipeline, where the output from predictors are fed into another predictor to ensemble in a learned way:
 
