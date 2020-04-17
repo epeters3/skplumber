@@ -13,6 +13,8 @@ _(__  )_  ,<  __  /_/ /  / / /_/ /_  / / / / /  /_/ /  __/  /
 
 A package for automatically sampling, training, and scoring machine learning pipelines on classification or regression problems. The base constructs (pipelines, primitives, etc.) take heavily from the [Data Driven Discovery of Models (D3M)](https://docs.datadrivendiscovery.org/) core package.
 
+API documentation for the project is located [here](https://epeters3.github.io/skplumber/).
+
 ## Installation
 
 ```shell
