@@ -30,7 +30,7 @@ pip install skplumber
 
 ### The `SKPlumber` AutoML System
 
-The top-level API of the package is the `SKPlumber` class. You instantiate the class, then use it's `fit` method to perform a search for an optimal machine learning (ML) pipeline, given your input data `X`, and `y` (a `pandas.DataFrame` and `pandas.Series` respectively). Here is an example using the classic iris dataset:
+The top-level API of the package is the `skplumber.skplumber.SKPlumber` class. You instantiate the class, then use it's `fit` method to perform a search for an optimal machine learning (ML) pipeline, given your input data `X`, and `y` (a `pandas.DataFrame` and `pandas.Series` respectively). Here is an example using the classic iris dataset:
 
 ```python
 from skplumber import SKPlumber
@@ -52,7 +52,7 @@ predictions = plumber.predict(unseen_X)
 
 ### `Pipeline`
 
-The `Pipeline` class is a slightly lower level API for the package that can be used to build, fit, and predict arbitrarily shaped machine learning pipelines. For example, we can create a basic single level stacking pipeline, where the output from predictors are fed into another predictor to ensemble in a learned way:
+The `skplumber.pipeline.Pipeline` class is a slightly lower level API for the package that can be used to build, fit, and predict arbitrarily shaped machine learning pipelines. For example, we can create a basic single level stacking pipeline, where the output from predictors are fed into another predictor to ensemble in a learned way:
 
 ```python
 from skplumber import Pipeline
