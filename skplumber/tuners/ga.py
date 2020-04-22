@@ -91,14 +91,25 @@ def ga_tune(
     metric: Metric,
     exit_on_pipeline_error: bool = True,
     **flexgakwargs,
-) -> t.Tuple[float, t.Dict[int, t.Dict[str, t.Any]]]:
+) -> t.Tuple[float, t.Dict[int, t.Dict[str, t.Any]], int]:
     """
     Performs a genetic algorithm hyperparameter tuning on a copy of
     `pipeline`, returning the best score it could find and the
     hyperparameter configuration for that best score, so the user
     can decide to use it if they want.
+
+    Returns
+    -------
+    optimal_score : float
+        The best evaluator score the optimizer could find
+    optimal_params : dict
+        The hyperparameter configuration that yielded the optimal score
+    n_evals : int
+        The number of pipeline evaluations the optimizer completed along
+        the way.
     """
     pipeline_to_tune = copy.deepcopy(pipeline)
+    n_evals = 0  # keep track of how many iterations were completed
 
     def objective(*args, **flexga_params) -> float:
         """
@@ -106,10 +117,11 @@ def ga_tune(
         try to maximize.
         """
         params = get_params_from_flexga(flexga_params)
-        pipeline_to_tune.set_params(params)
+        nonlocal n_evals
 
         try:
             score = evaluator(pipeline_to_tune, X, y, metric)
+            pipeline_to_tune.set_params(params)
         except PipelineRunError as e:
             logger.exception(e)
             if exit_on_pipeline_error:
@@ -118,6 +130,7 @@ def ga_tune(
             # TODO: make this `None` or `np.nan` instead.
             score = metric.worst_value
 
+        n_evals += 1
         # The genetic algorithm tries to maximize
         return -score if metric.opt_dir == OptimizationDirection.MINIMIZE else score
 
@@ -130,4 +143,4 @@ def ga_tune(
     logger.info("tuning complete.")
     logger.info(f"found best pipeline configuration: {pipeline_to_tune}")
     logger.info(f"found best validation score of {optimal_score}")
-    return optimal_score, optimal_params
+    return optimal_score, optimal_params, n_evals

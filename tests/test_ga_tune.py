@@ -40,3 +40,14 @@ class TestGATune(TestCase):
         evaluate = make_train_test_evaluator()
         logger.info(f"baseline score: {evaluate(pipeline, self.X, self.y, f1macro)}")
         ga_tune(pipeline, self.X, self.y, evaluate, f1macro, iters=2)
+
+    def test_returns_correct_number_evalus(self):
+        pipeline = Pipeline()
+        pipeline.add_step(classifiers["DecisionTreeClassifierPrimitive"])
+        evaluate = make_train_test_evaluator()
+        n_expected_evals = 12
+
+        _, _, n_evals = ga_tune(
+            pipeline, self.X, self.y, evaluate, f1macro, iters=2, population_size=6
+        )
+        self.assertEqual(n_evals, n_expected_evals)
