@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import typing as t
+from typing import NamedTuple
 from time import time
 
 import pandas as pd
@@ -16,7 +17,7 @@ from skplumber.utils import (
 )
 
 
-class SamplerState(t.NamedTuple):
+class SamplerState(NamedTuple):
     score: float
     pipeline: Pipeline
     train_time: float
@@ -38,7 +39,7 @@ class PipelineSampler(ABC):
         num_samples: t.Optional[int] = None,
         callback: t.Union[None, t.Callable, t.List[t.Callable]] = None,
         exit_on_pipeline_error: bool = True,
-    ) -> t.Tuple[Pipeline, float]:
+    ) -> t.Tuple[Pipeline, float, int]:
         """Samples `num_samples` pipelines, returning the best one found along the way.
         
         Returns
@@ -47,6 +48,8 @@ class PipelineSampler(ABC):
             The fitted best pipeline trained on the problem.
         best_score : float
             The score of the best pipeline that was trained.
+        n_iters : int
+            The total number of iterations the sampler completed.
         """
 
         # Validate inputs
@@ -77,10 +80,12 @@ class PipelineSampler(ABC):
 
         # Conduct the sampling
 
-        i = 1
+        i = 0
         while True:
+            i += 1
             logger.info(
-                f"sampling pipeline {i}{'/' + str(num_samples) if num_samples else ''}"
+                f"sampling pipeline {i}"
+                f"{'/' + str(num_samples) if num_samples else ''}"
             )
             pipeline = self.sample_pipeline(problem_type, models, transformers)
 
@@ -134,9 +139,7 @@ class PipelineSampler(ABC):
                 if exit_on_pipeline_error:
                     raise e
 
-            i += 1
-
-        return best_pipeline, best_score
+        return best_pipeline, best_score, i
 
     @abstractmethod
     def sample_pipeline(
