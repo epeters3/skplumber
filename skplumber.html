@@ -25,6 +25,7 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import typing as t
+from typing import NamedTuple
 from time import time
 
 import pandas as pd
@@ -37,16 +38,35 @@ from skplumber.primitives.primitive import Primitive
 from skplumber.primitives.sk_primitives.classifiers import classifiers
 from skplumber.primitives.sk_primitives.regressors import regressors
 from skplumber.primitives.sk_primitives.transformers import transformers
-from skplumber.metrics import default_metrics, metrics
+from skplumber.metrics import default_metrics, metrics, Metric
 from skplumber.utils import logger
 from skplumber.evaluators import make_train_test_evaluator
 from skplumber.tuners.ga import ga_tune
 from skplumber.progress import EVProgress
 
 
+class SKPlumberFitState:
+    def __init__(self, budget: int, metric: Metric) -&gt; None:
+        self.starttime = time()
+        self.endbytime = self.starttime + budget
+        self.best_pipeline_min_tune_time = 0.0
+        self.best_score = metric.worst_value
+
+
+class SearchResult(NamedTuple):
+    # total train time in seconds
+    time: float
+    # total number of pipelines the sampler tried
+    n_sample_iters: int
+    # total number of pipelines the hyperparameter tuner tried
+    n_tune_iters: int
+    # the best score SKPlumber was able to find
+    best_score: float
+
+
 class SKPlumber:
 
-    models_map: t.Dict[ProblemType, t.List[t.Type[Primitive]]] = {
+    _models_map: t.Dict[ProblemType, t.List[t.Type[Primitive]]] = {
         ProblemType.CLASSIFICATION: list(classifiers.values()),
         ProblemType.REGRESSION: list(regressors.values()),
     }
@@ -183,7 +203,7 @@ class SKPlumber:
         if callback:
             self.sampler_cbs.append(callback)
 
-    def fit(self, X: pd.DataFrame, y: pd.Series) -&gt; None:
+    def fit(self, X: pd.DataFrame, y: pd.Series) -&gt; SearchResult:
         &#34;&#34;&#34;
         The main runtime method of the package. Given a dataset, problem type,
         and sampling strategy, it tries to find, in a limited amount of time,
@@ -196,6 +216,11 @@ class SKPlumber:
         y : pandas.Series
             The target vector of your dataset. The indices of `X` and `y`
             should match up.
+
+        Returns
+        -------
+        result : SearchResult
+            A named tuple containing data about how the fit process went.
         &#34;&#34;&#34;
 
         # Initialize
@@ -203,19 +228,16 @@ class SKPlumber:
         if len(X.index) != y.size:
             raise ValueError(f&#34;X and y must have the same number of instances&#34;)
 
-        # The time we need to finish fitting by
-        self.starttime = time()
-        self.endtime = self.starttime + self.budget
-        self.best_pipeline_min_tune_time = 0.0
-        self.best_score = self.metric.worst_value
+        # A little encapsulation to make this `fit` method&#39;s code less huge.
+        self.state = SKPlumberFitState(self.budget, self.metric)
 
         # Run
 
         self.progress.start()
-        best_pipeline, best_score = self.sampler.run(
+        best_pipeline, best_score, n_sample_iters = self.sampler.run(
             X,
             y,
-            models=self.models_map[self.problem_type],
+            models=self._models_map[self.problem_type],
             transformers=list(transformers.values()),
             problem_type=self.problem_type,
             metric=self.metric,
@@ -225,7 +247,7 @@ class SKPlumber:
             exit_on_pipeline_error=self.exit_on_pipeline_error,
         )
         self.best_pipeline = best_pipeline
-        self.best_score = best_score
+        self.state.best_score = best_score
 
         logger.info(f&#34;found best validation score of {best_score}&#34;)
         logger.info(&#34;best pipeline:&#34;)
@@ -235,7 +257,7 @@ class SKPlumber:
             logger.info(
                 &#34;now performing hyperparameter tuning on best found pipeline...&#34;
             )
-            best_tuning_score, best_tuning_params = ga_tune(
+            best_tuning_score, best_tuning_params, n_tune_iters = ga_tune(
                 self.best_pipeline,
                 X,
                 y,
@@ -247,11 +269,13 @@ class SKPlumber:
                 ),
                 callback=self._tuner_callback,
             )
-            if self.metric.is_better_than(best_tuning_score, self.best_score):
+            if self.metric.is_better_than(best_tuning_score, self.state.best_score):
                 # The hyperparameter tuning was able to find an
                 # improvement.
-                self.best_score = best_tuning_score
+                self.state.best_score = best_tuning_score
                 self.best_pipeline.set_params(best_tuning_params)
+        else:
+            n_tune_iters = 0
 
         # Now that we have the &#34;best&#34; model, train it on
         # the full dataset so it can see as much of the
@@ -260,17 +284,21 @@ class SKPlumber:
         self.best_pipeline.fit(*shuffle(X, y))
 
         logger.info(
-            f&#34;finished. total execution time: {time() - self.starttime:.2f} seconds.&#34;
+            &#34;finished. total execution time: &#34;
+            f&#34;{time() - self.state.starttime:.2f} seconds.&#34;
         )
-        logger.info(f&#34;final best score found: {self.best_score}&#34;)
+        logger.info(f&#34;final best score found: {self.state.best_score}&#34;)
 
-        # Decomission temporary variables
-        del self.starttime
-        del self.endtime
-        del self.best_pipeline_min_tune_time
+        result = SearchResult(
+            time() - self.state.starttime,
+            n_sample_iters,
+            n_tune_iters,
+            self.state.best_score,
+        )
 
         # Fitting completed successfully
         self.is_fitted = True
+        return result
 
     def predict(self, X: pd.DataFrame) -&gt; pd.Series:
         &#34;&#34;&#34;
@@ -283,32 +311,34 @@ class SKPlumber:
             )
         return self.best_pipeline.predict(X)
 
-    def _sampler_cb(self, state: SamplerState) -&gt; bool:
+    def _sampler_cb(self, sampler_state: SamplerState) -&gt; bool:
         # Decide how much time is left available to us in
         # the sampling phase.
         if self.tune:
             # We want to leave enough time in the budget to be able
             # to complete at least one generation of hyperparameter tuning.
-            if self.metric.is_better_than(state.score, self.best_score):
-                self.best_score = state.score
+            if self.metric.is_better_than(sampler_state.score, self.state.best_score):
+                self.state.best_score = sampler_state.score
                 # An estimate of how long it will take to complete one
                 # generation of hyperparameter tuning on this current
                 # best pipeline.
-                self.best_pipeline_min_tune_time = (
-                    state.train_time
-                    * state.pipeline.num_params
+                self.state.best_pipeline_min_tune_time = (
+                    sampler_state.train_time
+                    * sampler_state.pipeline.num_params
                     * self.tuning_mult_factor
                 )
-            sampling_endtime = self.endtime - self.best_pipeline_min_tune_time
+            sampling_endtime = (
+                self.state.endbytime - self.state.best_pipeline_min_tune_time
+            )
         else:
-            sampling_endtime = self.endtime
+            sampling_endtime = self.state.endbytime
 
         now = time()
         logger.info(f&#34;{sampling_endtime - now:.2f} seconds left in sampling budget&#34;)
 
         # Logic for tracking sampler progress and exiting when the cost
         # of finding a new best score is too great.
-        self.progress.observe(state.score)
+        self.progress.observe(sampler_state.score)
 
         exit_early = False
         if now &gt; sampling_endtime:
@@ -331,16 +361,18 @@ class SKPlumber:
 
         return exit_early
 
-    def _tuner_callback(self, state: dict) -&gt; bool:
+    def _tuner_callback(self, tuner_state: dict) -&gt; bool:
         now = time()
         logger.info(
-            f&#34;candidate pipeline in generation {state[&#39;nit&#39;]} finished. &#34;
-            f&#34;{self.endtime - now:.2f} seconds left in budget.&#34;
+            f&#34;candidate pipeline in generation {tuner_state[&#39;nit&#39;]} finished. &#34;
+            f&#34;{self.state.endbytime - now:.2f} seconds left in budget.&#34;
         )
-        logger.info(f&#34;best score found so far: {state[&#39;fun&#39;]}&#34;)
-        logger.info(f&#34;best hyperparameter config found so far: {state[&#39;kwargs_opt&#39;]}&#34;)
+        logger.info(f&#34;best score found so far: {tuner_state[&#39;fun&#39;]}&#34;)
+        logger.info(
+            f&#34;best hyperparameter config found so far: {tuner_state[&#39;kwargs_opt&#39;]}&#34;
+        )
         # We need to quit early if our time budget is used up.
-        return True if time() &gt; self.endtime else False</code></pre>
+        return True if time() &gt; self.state.endbytime else False</code></pre>
 </details>
 </section>
 <section>
@@ -428,7 +460,7 @@ value.</dd>
 </summary>
 <pre><code class="python">class SKPlumber:
 
-    models_map: t.Dict[ProblemType, t.List[t.Type[Primitive]]] = {
+    _models_map: t.Dict[ProblemType, t.List[t.Type[Primitive]]] = {
         ProblemType.CLASSIFICATION: list(classifiers.values()),
         ProblemType.REGRESSION: list(regressors.values()),
     }
@@ -565,7 +597,7 @@ value.</dd>
         if callback:
             self.sampler_cbs.append(callback)
 
-    def fit(self, X: pd.DataFrame, y: pd.Series) -&gt; None:
+    def fit(self, X: pd.DataFrame, y: pd.Series) -&gt; SearchResult:
         &#34;&#34;&#34;
         The main runtime method of the package. Given a dataset, problem type,
         and sampling strategy, it tries to find, in a limited amount of time,
@@ -578,6 +610,11 @@ value.</dd>
         y : pandas.Series
             The target vector of your dataset. The indices of `X` and `y`
             should match up.
+
+        Returns
+        -------
+        result : SearchResult
+            A named tuple containing data about how the fit process went.
         &#34;&#34;&#34;
 
         # Initialize
@@ -585,19 +622,16 @@ value.</dd>
         if len(X.index) != y.size:
             raise ValueError(f&#34;X and y must have the same number of instances&#34;)
 
-        # The time we need to finish fitting by
-        self.starttime = time()
-        self.endtime = self.starttime + self.budget
-        self.best_pipeline_min_tune_time = 0.0
-        self.best_score = self.metric.worst_value
+        # A little encapsulation to make this `fit` method&#39;s code less huge.
+        self.state = SKPlumberFitState(self.budget, self.metric)
 
         # Run
 
         self.progress.start()
-        best_pipeline, best_score = self.sampler.run(
+        best_pipeline, best_score, n_sample_iters = self.sampler.run(
             X,
             y,
-            models=self.models_map[self.problem_type],
+            models=self._models_map[self.problem_type],
             transformers=list(transformers.values()),
             problem_type=self.problem_type,
             metric=self.metric,
@@ -607,7 +641,7 @@ value.</dd>
             exit_on_pipeline_error=self.exit_on_pipeline_error,
         )
         self.best_pipeline = best_pipeline
-        self.best_score = best_score
+        self.state.best_score = best_score
 
         logger.info(f&#34;found best validation score of {best_score}&#34;)
         logger.info(&#34;best pipeline:&#34;)
@@ -617,7 +651,7 @@ value.</dd>
             logger.info(
                 &#34;now performing hyperparameter tuning on best found pipeline...&#34;
             )
-            best_tuning_score, best_tuning_params = ga_tune(
+            best_tuning_score, best_tuning_params, n_tune_iters = ga_tune(
                 self.best_pipeline,
                 X,
                 y,
@@ -629,11 +663,13 @@ value.</dd>
                 ),
                 callback=self._tuner_callback,
             )
-            if self.metric.is_better_than(best_tuning_score, self.best_score):
+            if self.metric.is_better_than(best_tuning_score, self.state.best_score):
                 # The hyperparameter tuning was able to find an
                 # improvement.
-                self.best_score = best_tuning_score
+                self.state.best_score = best_tuning_score
                 self.best_pipeline.set_params(best_tuning_params)
+        else:
+            n_tune_iters = 0
 
         # Now that we have the &#34;best&#34; model, train it on
         # the full dataset so it can see as much of the
@@ -642,17 +678,21 @@ value.</dd>
         self.best_pipeline.fit(*shuffle(X, y))
 
         logger.info(
-            f&#34;finished. total execution time: {time() - self.starttime:.2f} seconds.&#34;
+            &#34;finished. total execution time: &#34;
+            f&#34;{time() - self.state.starttime:.2f} seconds.&#34;
         )
-        logger.info(f&#34;final best score found: {self.best_score}&#34;)
+        logger.info(f&#34;final best score found: {self.state.best_score}&#34;)
 
-        # Decomission temporary variables
-        del self.starttime
-        del self.endtime
-        del self.best_pipeline_min_tune_time
+        result = SearchResult(
+            time() - self.state.starttime,
+            n_sample_iters,
+            n_tune_iters,
+            self.state.best_score,
+        )
 
         # Fitting completed successfully
         self.is_fitted = True
+        return result
 
     def predict(self, X: pd.DataFrame) -&gt; pd.Series:
         &#34;&#34;&#34;
@@ -665,32 +705,34 @@ value.</dd>
             )
         return self.best_pipeline.predict(X)
 
-    def _sampler_cb(self, state: SamplerState) -&gt; bool:
+    def _sampler_cb(self, sampler_state: SamplerState) -&gt; bool:
         # Decide how much time is left available to us in
         # the sampling phase.
         if self.tune:
             # We want to leave enough time in the budget to be able
             # to complete at least one generation of hyperparameter tuning.
-            if self.metric.is_better_than(state.score, self.best_score):
-                self.best_score = state.score
+            if self.metric.is_better_than(sampler_state.score, self.state.best_score):
+                self.state.best_score = sampler_state.score
                 # An estimate of how long it will take to complete one
                 # generation of hyperparameter tuning on this current
                 # best pipeline.
-                self.best_pipeline_min_tune_time = (
-                    state.train_time
-                    * state.pipeline.num_params
+                self.state.best_pipeline_min_tune_time = (
+                    sampler_state.train_time
+                    * sampler_state.pipeline.num_params
                     * self.tuning_mult_factor
                 )
-            sampling_endtime = self.endtime - self.best_pipeline_min_tune_time
+            sampling_endtime = (
+                self.state.endbytime - self.state.best_pipeline_min_tune_time
+            )
         else:
-            sampling_endtime = self.endtime
+            sampling_endtime = self.state.endbytime
 
         now = time()
         logger.info(f&#34;{sampling_endtime - now:.2f} seconds left in sampling budget&#34;)
 
         # Logic for tracking sampler progress and exiting when the cost
         # of finding a new best score is too great.
-        self.progress.observe(state.score)
+        self.progress.observe(sampler_state.score)
 
         exit_early = False
         if now &gt; sampling_endtime:
@@ -713,28 +755,23 @@ value.</dd>
 
         return exit_early
 
-    def _tuner_callback(self, state: dict) -&gt; bool:
+    def _tuner_callback(self, tuner_state: dict) -&gt; bool:
         now = time()
         logger.info(
-            f&#34;candidate pipeline in generation {state[&#39;nit&#39;]} finished. &#34;
-            f&#34;{self.endtime - now:.2f} seconds left in budget.&#34;
+            f&#34;candidate pipeline in generation {tuner_state[&#39;nit&#39;]} finished. &#34;
+            f&#34;{self.state.endbytime - now:.2f} seconds left in budget.&#34;
         )
-        logger.info(f&#34;best score found so far: {state[&#39;fun&#39;]}&#34;)
-        logger.info(f&#34;best hyperparameter config found so far: {state[&#39;kwargs_opt&#39;]}&#34;)
+        logger.info(f&#34;best score found so far: {tuner_state[&#39;fun&#39;]}&#34;)
+        logger.info(
+            f&#34;best hyperparameter config found so far: {tuner_state[&#39;kwargs_opt&#39;]}&#34;
+        )
         # We need to quit early if our time budget is used up.
-        return True if time() &gt; self.endtime else False</code></pre>
+        return True if time() &gt; self.state.endbytime else False</code></pre>
 </details>
-<h3>Class variables</h3>
-<dl>
-<dt id="skplumber.skplumber.SKPlumber.models_map"><code class="name">var <span class="ident">models_map</span> : Dict[<a title="skplumber.consts.ProblemType" href="consts.html#skplumber.consts.ProblemType">ProblemType</a>, List[Type[<a title="skplumber.primitives.primitive.Primitive" href="primitives/primitive.html#skplumber.primitives.primitive.Primitive">Primitive</a>]]]</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-</dl>
 <h3>Methods</h3>
 <dl>
 <dt id="skplumber.skplumber.SKPlumber.fit"><code class="name flex">
-<span>def <span class="ident">fit</span></span>(<span>self, X: pandas.core.frame.DataFrame, y: pandas.core.series.Series) -> NoneType</span>
+<span>def <span class="ident">fit</span></span>(<span>self, X: pandas.core.frame.DataFrame, y: pandas.core.series.Series) -> <a title="skplumber.skplumber.SearchResult" href="#skplumber.skplumber.SearchResult">SearchResult</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>The main runtime method of the package. Given a dataset, problem type,
@@ -747,12 +784,17 @@ the best performing pipeline it can.</p>
 <dt><strong><code>y</code></strong> :&ensp;<code>pandas.Series</code></dt>
 <dd>The target vector of your dataset. The indices of <code>X</code> and <code>y</code>
 should match up.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>result</code></strong> :&ensp;<code><a title="skplumber.skplumber.SearchResult" href="#skplumber.skplumber.SearchResult">SearchResult</a></code></dt>
+<dd>A named tuple containing data about how the fit process went.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def fit(self, X: pd.DataFrame, y: pd.Series) -&gt; None:
+<pre><code class="python">def fit(self, X: pd.DataFrame, y: pd.Series) -&gt; SearchResult:
     &#34;&#34;&#34;
     The main runtime method of the package. Given a dataset, problem type,
     and sampling strategy, it tries to find, in a limited amount of time,
@@ -765,6 +807,11 @@ should match up.</dd>
     y : pandas.Series
         The target vector of your dataset. The indices of `X` and `y`
         should match up.
+
+    Returns
+    -------
+    result : SearchResult
+        A named tuple containing data about how the fit process went.
     &#34;&#34;&#34;
 
     # Initialize
@@ -772,19 +819,16 @@ should match up.</dd>
     if len(X.index) != y.size:
         raise ValueError(f&#34;X and y must have the same number of instances&#34;)
 
-    # The time we need to finish fitting by
-    self.starttime = time()
-    self.endtime = self.starttime + self.budget
-    self.best_pipeline_min_tune_time = 0.0
-    self.best_score = self.metric.worst_value
+    # A little encapsulation to make this `fit` method&#39;s code less huge.
+    self.state = SKPlumberFitState(self.budget, self.metric)
 
     # Run
 
     self.progress.start()
-    best_pipeline, best_score = self.sampler.run(
+    best_pipeline, best_score, n_sample_iters = self.sampler.run(
         X,
         y,
-        models=self.models_map[self.problem_type],
+        models=self._models_map[self.problem_type],
         transformers=list(transformers.values()),
         problem_type=self.problem_type,
         metric=self.metric,
@@ -794,7 +838,7 @@ should match up.</dd>
         exit_on_pipeline_error=self.exit_on_pipeline_error,
     )
     self.best_pipeline = best_pipeline
-    self.best_score = best_score
+    self.state.best_score = best_score
 
     logger.info(f&#34;found best validation score of {best_score}&#34;)
     logger.info(&#34;best pipeline:&#34;)
@@ -804,7 +848,7 @@ should match up.</dd>
         logger.info(
             &#34;now performing hyperparameter tuning on best found pipeline...&#34;
         )
-        best_tuning_score, best_tuning_params = ga_tune(
+        best_tuning_score, best_tuning_params, n_tune_iters = ga_tune(
             self.best_pipeline,
             X,
             y,
@@ -816,11 +860,13 @@ should match up.</dd>
             ),
             callback=self._tuner_callback,
         )
-        if self.metric.is_better_than(best_tuning_score, self.best_score):
+        if self.metric.is_better_than(best_tuning_score, self.state.best_score):
             # The hyperparameter tuning was able to find an
             # improvement.
-            self.best_score = best_tuning_score
+            self.state.best_score = best_tuning_score
             self.best_pipeline.set_params(best_tuning_params)
+    else:
+        n_tune_iters = 0
 
     # Now that we have the &#34;best&#34; model, train it on
     # the full dataset so it can see as much of the
@@ -829,17 +875,21 @@ should match up.</dd>
     self.best_pipeline.fit(*shuffle(X, y))
 
     logger.info(
-        f&#34;finished. total execution time: {time() - self.starttime:.2f} seconds.&#34;
+        &#34;finished. total execution time: &#34;
+        f&#34;{time() - self.state.starttime:.2f} seconds.&#34;
     )
-    logger.info(f&#34;final best score found: {self.best_score}&#34;)
+    logger.info(f&#34;final best score found: {self.state.best_score}&#34;)
 
-    # Decomission temporary variables
-    del self.starttime
-    del self.endtime
-    del self.best_pipeline_min_tune_time
+    result = SearchResult(
+        time() - self.state.starttime,
+        n_sample_iters,
+        n_tune_iters,
+        self.state.best_score,
+    )
 
     # Fitting completed successfully
-    self.is_fitted = True</code></pre>
+    self.is_fitted = True
+    return result</code></pre>
 </details>
 </dd>
 <dt id="skplumber.skplumber.SKPlumber.predict"><code class="name flex">
@@ -865,6 +915,68 @@ should match up.</dd>
 </dd>
 </dl>
 </dd>
+<dt id="skplumber.skplumber.SKPlumberFitState"><code class="flex name class">
+<span>class <span class="ident">SKPlumberFitState</span></span>
+<span>(</span><span>budget: int, metric: <a title="skplumber.metrics.Metric" href="metrics.html#skplumber.metrics.Metric">Metric</a>)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SKPlumberFitState:
+    def __init__(self, budget: int, metric: Metric) -&gt; None:
+        self.starttime = time()
+        self.endbytime = self.starttime + budget
+        self.best_pipeline_min_tune_time = 0.0
+        self.best_score = metric.worst_value</code></pre>
+</details>
+</dd>
+<dt id="skplumber.skplumber.SearchResult"><code class="flex name class">
+<span>class <span class="ident">SearchResult</span></span>
+<span>(</span><span>time: float, n_sample_iters: int, n_tune_iters: int, best_score: float)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>SearchResult(time, n_sample_iters, n_tune_iters, best_score)</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SearchResult(NamedTuple):
+    # total train time in seconds
+    time: float
+    # total number of pipelines the sampler tried
+    n_sample_iters: int
+    # total number of pipelines the hyperparameter tuner tried
+    n_tune_iters: int
+    # the best score SKPlumber was able to find
+    best_score: float</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>builtins.tuple</li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="skplumber.skplumber.SearchResult.best_score"><code class="name">var <span class="ident">best_score</span> : float</code></dt>
+<dd>
+<div class="desc"><p>Alias for field number 3</p></div>
+</dd>
+<dt id="skplumber.skplumber.SearchResult.n_sample_iters"><code class="name">var <span class="ident">n_sample_iters</span> : int</code></dt>
+<dd>
+<div class="desc"><p>Alias for field number 1</p></div>
+</dd>
+<dt id="skplumber.skplumber.SearchResult.n_tune_iters"><code class="name">var <span class="ident">n_tune_iters</span> : int</code></dt>
+<dd>
+<div class="desc"><p>Alias for field number 2</p></div>
+</dd>
+<dt id="skplumber.skplumber.SearchResult.time"><code class="name">var <span class="ident">time</span> : float</code></dt>
+<dd>
+<div class="desc"><p>Alias for field number 0</p></div>
+</dd>
+</dl>
+</dd>
 </dl>
 </section>
 </article>
@@ -885,8 +997,19 @@ should match up.</dd>
 <h4><code><a title="skplumber.skplumber.SKPlumber" href="#skplumber.skplumber.SKPlumber">SKPlumber</a></code></h4>
 <ul class="">
 <li><code><a title="skplumber.skplumber.SKPlumber.fit" href="#skplumber.skplumber.SKPlumber.fit">fit</a></code></li>
-<li><code><a title="skplumber.skplumber.SKPlumber.models_map" href="#skplumber.skplumber.SKPlumber.models_map">models_map</a></code></li>
 <li><code><a title="skplumber.skplumber.SKPlumber.predict" href="#skplumber.skplumber.SKPlumber.predict">predict</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="skplumber.skplumber.SKPlumberFitState" href="#skplumber.skplumber.SKPlumberFitState">SKPlumberFitState</a></code></h4>
+</li>
+<li>
+<h4><code><a title="skplumber.skplumber.SearchResult" href="#skplumber.skplumber.SearchResult">SearchResult</a></code></h4>
+<ul class="">
+<li><code><a title="skplumber.skplumber.SearchResult.best_score" href="#skplumber.skplumber.SearchResult.best_score">best_score</a></code></li>
+<li><code><a title="skplumber.skplumber.SearchResult.n_sample_iters" href="#skplumber.skplumber.SearchResult.n_sample_iters">n_sample_iters</a></code></li>
+<li><code><a title="skplumber.skplumber.SearchResult.n_tune_iters" href="#skplumber.skplumber.SearchResult.n_tune_iters">n_tune_iters</a></code></li>
+<li><code><a title="skplumber.skplumber.SearchResult.time" href="#skplumber.skplumber.SearchResult.time">time</a></code></li>
 </ul>
 </li>
 </ul>

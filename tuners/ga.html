@@ -117,14 +117,25 @@ def ga_tune(
     metric: Metric,
     exit_on_pipeline_error: bool = True,
     **flexgakwargs,
-) -&gt; t.Tuple[float, t.Dict[int, t.Dict[str, t.Any]]]:
+) -&gt; t.Tuple[float, t.Dict[int, t.Dict[str, t.Any]], int]:
     &#34;&#34;&#34;
     Performs a genetic algorithm hyperparameter tuning on a copy of
     `pipeline`, returning the best score it could find and the
     hyperparameter configuration for that best score, so the user
     can decide to use it if they want.
+
+    Returns
+    -------
+    optimal_score : float
+        The best evaluator score the optimizer could find
+    optimal_params : dict
+        The hyperparameter configuration that yielded the optimal score
+    n_evals : int
+        The number of pipeline evaluations the optimizer completed along
+        the way.
     &#34;&#34;&#34;
     pipeline_to_tune = copy.deepcopy(pipeline)
+    n_evals = 0  # keep track of how many iterations were completed
 
     def objective(*args, **flexga_params) -&gt; float:
         &#34;&#34;&#34;
@@ -132,10 +143,11 @@ def ga_tune(
         try to maximize.
         &#34;&#34;&#34;
         params = get_params_from_flexga(flexga_params)
-        pipeline_to_tune.set_params(params)
+        nonlocal n_evals
 
         try:
             score = evaluator(pipeline_to_tune, X, y, metric)
+            pipeline_to_tune.set_params(params)
         except PipelineRunError as e:
             logger.exception(e)
             if exit_on_pipeline_error:
@@ -144,6 +156,7 @@ def ga_tune(
             # TODO: make this `None` or `np.nan` instead.
             score = metric.worst_value
 
+        n_evals += 1
         # The genetic algorithm tries to maximize
         return -score if metric.opt_dir == OptimizationDirection.MINIMIZE else score
 
@@ -156,7 +169,7 @@ def ga_tune(
     logger.info(&#34;tuning complete.&#34;)
     logger.info(f&#34;found best pipeline configuration: {pipeline_to_tune}&#34;)
     logger.info(f&#34;found best validation score of {optimal_score}&#34;)
-    return optimal_score, optimal_params</code></pre>
+    return optimal_score, optimal_params, n_evals</code></pre>
 </details>
 </section>
 <section>
@@ -167,13 +180,23 @@ def ga_tune(
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="skplumber.tuners.ga.ga_tune"><code class="name flex">
-<span>def <span class="ident">ga_tune</span></span>(<span>pipeline: <a title="skplumber.pipeline.Pipeline" href="../pipeline.html#skplumber.pipeline.Pipeline">Pipeline</a>, X: pandas.core.frame.DataFrame, y: pandas.core.series.Series, evaluator: Callable, metric: <a title="skplumber.metrics.Metric" href="../metrics.html#skplumber.metrics.Metric">Metric</a>, exit_on_pipeline_error: bool = True, **flexgakwargs) -> Tuple[float, Dict[int, Dict[str, Any]]]</span>
+<span>def <span class="ident">ga_tune</span></span>(<span>pipeline: <a title="skplumber.pipeline.Pipeline" href="../pipeline.html#skplumber.pipeline.Pipeline">Pipeline</a>, X: pandas.core.frame.DataFrame, y: pandas.core.series.Series, evaluator: Callable, metric: <a title="skplumber.metrics.Metric" href="../metrics.html#skplumber.metrics.Metric">Metric</a>, exit_on_pipeline_error: bool = True, **flexgakwargs) -> Tuple[float, Dict[int, Dict[str, Any]], int]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Performs a genetic algorithm hyperparameter tuning on a copy of
 <code>pipeline</code>, returning the best score it could find and the
 hyperparameter configuration for that best score, so the user
-can decide to use it if they want.</p></div>
+can decide to use it if they want.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>optimal_score</code></strong> :&ensp;<code>float</code></dt>
+<dd>The best evaluator score the optimizer could find</dd>
+<dt><strong><code>optimal_params</code></strong> :&ensp;<code>dict</code></dt>
+<dd>The hyperparameter configuration that yielded the optimal score</dd>
+<dt><strong><code>n_evals</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of pipeline evaluations the optimizer completed along
+the way.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -186,14 +209,25 @@ can decide to use it if they want.</p></div>
     metric: Metric,
     exit_on_pipeline_error: bool = True,
     **flexgakwargs,
-) -&gt; t.Tuple[float, t.Dict[int, t.Dict[str, t.Any]]]:
+) -&gt; t.Tuple[float, t.Dict[int, t.Dict[str, t.Any]], int]:
     &#34;&#34;&#34;
     Performs a genetic algorithm hyperparameter tuning on a copy of
     `pipeline`, returning the best score it could find and the
     hyperparameter configuration for that best score, so the user
     can decide to use it if they want.
+
+    Returns
+    -------
+    optimal_score : float
+        The best evaluator score the optimizer could find
+    optimal_params : dict
+        The hyperparameter configuration that yielded the optimal score
+    n_evals : int
+        The number of pipeline evaluations the optimizer completed along
+        the way.
     &#34;&#34;&#34;
     pipeline_to_tune = copy.deepcopy(pipeline)
+    n_evals = 0  # keep track of how many iterations were completed
 
     def objective(*args, **flexga_params) -&gt; float:
         &#34;&#34;&#34;
@@ -201,10 +235,11 @@ can decide to use it if they want.</p></div>
         try to maximize.
         &#34;&#34;&#34;
         params = get_params_from_flexga(flexga_params)
-        pipeline_to_tune.set_params(params)
+        nonlocal n_evals
 
         try:
             score = evaluator(pipeline_to_tune, X, y, metric)
+            pipeline_to_tune.set_params(params)
         except PipelineRunError as e:
             logger.exception(e)
             if exit_on_pipeline_error:
@@ -213,6 +248,7 @@ can decide to use it if they want.</p></div>
             # TODO: make this `None` or `np.nan` instead.
             score = metric.worst_value
 
+        n_evals += 1
         # The genetic algorithm tries to maximize
         return -score if metric.opt_dir == OptimizationDirection.MINIMIZE else score
 
@@ -225,7 +261,7 @@ can decide to use it if they want.</p></div>
     logger.info(&#34;tuning complete.&#34;)
     logger.info(f&#34;found best pipeline configuration: {pipeline_to_tune}&#34;)
     logger.info(f&#34;found best validation score of {optimal_score}&#34;)
-    return optimal_score, optimal_params</code></pre>
+    return optimal_score, optimal_params, n_evals</code></pre>
 </details>
 </dd>
 <dt id="skplumber.tuners.ga.get_flexga_metas"><code class="name flex">
