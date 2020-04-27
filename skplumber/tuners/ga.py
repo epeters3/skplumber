@@ -23,9 +23,10 @@ from skplumber.primitives.parammeta import (
 )
 from skplumber.utils import logger, PipelineRunError
 from skplumber.consts import OptimizationDirection
+from skplumber.tuners.utils import TuneResult
 
 
-def range_rule(lbound, ubound) -> float:
+def _range_rule(lbound, ubound) -> float:
     """
     Uses a modified version (dividing by 10 instead of 4) of
     the range rule heuristic to provide a very rough estimate
@@ -36,7 +37,7 @@ def range_rule(lbound, ubound) -> float:
     return (ubound - lbound) / 10
 
 
-def get_flexga_metas(pipeline: Pipeline, X: pd.DataFrame) -> t.Dict[str, ArgMeta]:
+def _get_flexga_metas(pipeline: Pipeline, X: pd.DataFrame) -> t.Dict[str, ArgMeta]:
     """
     Converts meta information about the hyperparameters
     of a pipeline's primitive steps to the format the `flexga`
@@ -51,11 +52,13 @@ def get_flexga_metas(pipeline: Pipeline, X: pd.DataFrame) -> t.Dict[str, ArgMeta
             flexga_key = f"{i},{key}"
             if isinstance(pmeta, IntParamMeta):
                 flexga_arg_meta = IntArgMeta(
-                    (pmeta.lbound, pmeta.ubound), range_rule(pmeta.lbound, pmeta.ubound)
+                    (pmeta.lbound, pmeta.ubound),
+                    _range_rule(pmeta.lbound, pmeta.ubound),
                 )
             elif isinstance(pmeta, FloatParamMeta):
                 flexga_arg_meta = FloatArgMeta(
-                    (pmeta.lbound, pmeta.ubound), range_rule(pmeta.lbound, pmeta.ubound)
+                    (pmeta.lbound, pmeta.ubound),
+                    _range_rule(pmeta.lbound, pmeta.ubound),
                 )
             elif isinstance(pmeta, BoolParamMeta):
                 flexga_arg_meta = BoolArgMeta()
@@ -70,7 +73,7 @@ def get_flexga_metas(pipeline: Pipeline, X: pd.DataFrame) -> t.Dict[str, ArgMeta
     return kwargsmeta
 
 
-def get_params_from_flexga(flexga_params: dict) -> t.Dict[int, t.Dict[str, t.Any]]:
+def _get_params_from_flexga(flexga_params: dict) -> t.Dict[int, t.Dict[str, t.Any]]:
     """
     Converts flexga's flattened param dictionary to the nested
     dictionary `pipeline` uses.
@@ -91,37 +94,37 @@ def ga_tune(
     metric: Metric,
     exit_on_pipeline_error: bool = True,
     **flexgakwargs,
-) -> t.Tuple[float, t.Dict[int, t.Dict[str, t.Any]], int]:
+) -> TuneResult:
     """
-    Performs a genetic algorithm hyperparameter tuning on a copy of
-    `pipeline`, returning the best score it could find and the
-    hyperparameter configuration for that best score, so the user
-    can decide to use it if they want.
+    Performs a genetic algorithm hyperparameter tuning on `pipeline`,
+    returning the best score it could find and the number of evaluations
+    it completed. Essentially performs a `.fit` operation on the pipeline,
+    where the pipeine is fit with the best performing hyperparameter
+    configuration it could find.
 
     Returns
     -------
-    optimal_score : float
-        The best evaluator score the optimizer could find
-    optimal_params : dict
-        The hyperparameter configuration that yielded the optimal score
-    n_evals : int
-        The number of pipeline evaluations the optimizer completed along
-        the way.
+    result : TuneResult
+        A named tuple containing data about how the tuning process went.
     """
-    pipeline_to_tune = copy.deepcopy(pipeline)
-    n_evals = 0  # keep track of how many iterations were completed
+    # See what score the model gets without any tuning
+    starting_params = pipeline.get_params()
+    starting_score = evaluator(pipeline, X, y, metric)
+
+    # keep track of how many iterations were completed
+    n_evals = 1  # we already completed one
 
     def objective(*args, **flexga_params) -> float:
         """
         The objective function the genetic algorithm will
         try to maximize.
         """
-        params = get_params_from_flexga(flexga_params)
+        params = _get_params_from_flexga(flexga_params)
         nonlocal n_evals
 
         try:
-            score = evaluator(pipeline_to_tune, X, y, metric)
-            pipeline_to_tune.set_params(params)
+            score = evaluator(pipeline, X, y, metric)
+            pipeline.set_params(params)
         except PipelineRunError as e:
             logger.exception(e)
             if exit_on_pipeline_error:
@@ -136,11 +139,22 @@ def ga_tune(
 
     # Use flexga to find the best hyperparameter configuration it can.
     optimal_score, _, optimal_flexga_params = flexga(
-        objective, kwargsmeta=get_flexga_metas(pipeline_to_tune, X), **flexgakwargs
+        objective, kwargsmeta=_get_flexga_metas(pipeline, X), **flexgakwargs
     )
-    optimal_params = get_params_from_flexga(optimal_flexga_params)
-    pipeline_to_tune.set_params(optimal_params)
+    if metric.is_better_than(optimal_score, starting_score):
+        optimal_params = _get_params_from_flexga(optimal_flexga_params)
+        did_improve = True
+    else:
+        # The tuner couldn't find anything better than the params the
+        # pipeline started with under the conditions given.
+        optimal_score = starting_score
+        optimal_params = starting_params
+        did_improve = False
+
+    pipeline.set_params(optimal_params)
+    pipeline.fit(X, y)
+
     logger.info("tuning complete.")
-    logger.info(f"found best pipeline configuration: {pipeline_to_tune}")
+    logger.info(f"found best pipeline configuration: {pipeline}")
     logger.info(f"found best validation score of {optimal_score}")
-    return optimal_score, optimal_params, n_evals
+    return TuneResult(optimal_score, n_evals, did_improve)

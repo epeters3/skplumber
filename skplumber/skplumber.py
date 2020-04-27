@@ -231,7 +231,7 @@ class SKPlumber:
             logger.info(
                 "now performing hyperparameter tuning on best found pipeline..."
             )
-            best_tuning_score, best_tuning_params, n_tune_iters = ga_tune(
+            tune_result = ga_tune(
                 self.best_pipeline,
                 X,
                 y,
@@ -243,11 +243,8 @@ class SKPlumber:
                 ),
                 callback=self._tuner_callback,
             )
-            if self.metric.is_better_than(best_tuning_score, self.state.best_score):
-                # The hyperparameter tuning was able to find an
-                # improvement.
-                self.state.best_score = best_tuning_score
-                self.best_pipeline.set_params(best_tuning_params)
+            self.state.best_score = tune_result.best_score
+            n_tune_iters = tune_result.n_evals
         else:
             n_tune_iters = 0
 
@@ -255,7 +252,7 @@ class SKPlumber:
         # the full dataset so it can see as much of the
         # dataset's distribution as possible in an effort
         # to be more ready for the wild.
-        self.best_pipeline.fit(*shuffle(X, y))
+        self.best_pipeline.fit(X, y)
 
         logger.info(
             "finished. total execution time: "
