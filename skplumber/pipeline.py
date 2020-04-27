@@ -29,14 +29,15 @@ class PrimitiveStep:
 
 
 class Pipeline:
-    def __init__(self) -> None:
+    def __init__(self, add_preprocessing: bool = True) -> None:
         """
         Initializes the pipeline, including some preliminary
-        common data preprocessing.
+        common data preprocessing if `add_preprocessing == True`.
         """
         self.steps: t.List[PrimitiveStep] = []
-        self.add_step(RandomImputer)
-        self.add_step(OneHotEncoder)
+        if add_preprocessing:
+            self.add_step(RandomImputer)
+            self.add_step(OneHotEncoder)
 
     @property
     def curr_step_i(self) -> int:
