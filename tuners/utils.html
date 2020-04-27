@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.8.1" />
-<title>skplumber.tuners API documentation</title>
+<title>skplumber.tuners.utils API documentation</title>
 <meta name="description" content="" />
 <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
 <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
@@ -17,28 +17,73 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>skplumber.tuners</code></h1>
+<h1 class="title">Module <code>skplumber.tuners.utils</code></h1>
 </header>
 <section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">from typing import NamedTuple
+
+
+class TuneResult(NamedTuple):
+    best_score: float
+    &#34;&#34;&#34;The best validation score the tuner was able to find.&#34;&#34;&#34;
+    n_evals: int
+    &#34;&#34;&#34;The number of evaluations the tuner completed while optimizing.&#34;&#34;&#34;
+    did_improve: bool
+    &#34;&#34;&#34;Whether the tuner improved upon the starting hyperparameter configuration&#34;&#34;&#34;</code></pre>
+</details>
 </section>
 <section>
-<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt><code class="name"><a title="skplumber.tuners.ga" href="ga.html">skplumber.tuners.ga</a></code></dt>
+<dt id="skplumber.tuners.utils.TuneResult"><code class="flex name class">
+<span>class <span class="ident">TuneResult</span></span>
+<span>(</span><span>best_score: float, n_evals: int, did_improve: bool)</span>
+</code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>TuneResult(best_score, n_evals, did_improve)</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class TuneResult(NamedTuple):
+    best_score: float
+    &#34;&#34;&#34;The best validation score the tuner was able to find.&#34;&#34;&#34;
+    n_evals: int
+    &#34;&#34;&#34;The number of evaluations the tuner completed while optimizing.&#34;&#34;&#34;
+    did_improve: bool
+    &#34;&#34;&#34;Whether the tuner improved upon the starting hyperparameter configuration&#34;&#34;&#34;</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>builtins.tuple</li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="skplumber.tuners.utils.TuneResult.best_score"><code class="name">var <span class="ident">best_score</span> : float</code></dt>
+<dd>
+<div class="desc"><p>The best validation score the tuner was able to find.</p></div>
 </dd>
-<dt><code class="name"><a title="skplumber.tuners.utils" href="utils.html">skplumber.tuners.utils</a></code></dt>
+<dt id="skplumber.tuners.utils.TuneResult.did_improve"><code class="name">var <span class="ident">did_improve</span> : bool</code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Whether the tuner improved upon the starting hyperparameter configuration</p></div>
+</dd>
+<dt id="skplumber.tuners.utils.TuneResult.n_evals"><code class="name">var <span class="ident">n_evals</span> : int</code></dt>
+<dd>
+<div class="desc"><p>The number of evaluations the tuner completed while optimizing.</p></div>
 </dd>
 </dl>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
+</dd>
+</dl>
 </section>
 </article>
 <nav id="sidebar">
@@ -49,13 +94,19 @@
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="skplumber" href="../index.html">skplumber</a></code></li>
+<li><code><a title="skplumber.tuners" href="index.html">skplumber.tuners</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
-<li><code><a title="skplumber.tuners.ga" href="ga.html">skplumber.tuners.ga</a></code></li>
-<li><code><a title="skplumber.tuners.utils" href="utils.html">skplumber.tuners.utils</a></code></li>
+<li>
+<h4><code><a title="skplumber.tuners.utils.TuneResult" href="#skplumber.tuners.utils.TuneResult">TuneResult</a></code></h4>
+<ul class="">
+<li><code><a title="skplumber.tuners.utils.TuneResult.best_score" href="#skplumber.tuners.utils.TuneResult.best_score">best_score</a></code></li>
+<li><code><a title="skplumber.tuners.utils.TuneResult.did_improve" href="#skplumber.tuners.utils.TuneResult.did_improve">did_improve</a></code></li>
+<li><code><a title="skplumber.tuners.utils.TuneResult.n_evals" href="#skplumber.tuners.utils.TuneResult.n_evals">n_evals</a></code></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

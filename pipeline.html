@@ -55,14 +55,15 @@ class PrimitiveStep:
 
 
 class Pipeline:
-    def __init__(self) -&gt; None:
+    def __init__(self, add_preprocessing: bool = True) -&gt; None:
         &#34;&#34;&#34;
         Initializes the pipeline, including some preliminary
-        common data preprocessing.
+        common data preprocessing if `add_preprocessing == True`.
         &#34;&#34;&#34;
         self.steps: t.List[PrimitiveStep] = []
-        self.add_step(RandomImputer)
-        self.add_step(OneHotEncoder)
+        if add_preprocessing:
+            self.add_step(RandomImputer)
+            self.add_step(OneHotEncoder)
 
     @property
     def curr_step_i(self) -&gt; int:
@@ -195,23 +196,25 @@ class Pipeline:
 <dl>
 <dt id="skplumber.pipeline.Pipeline"><code class="flex name class">
 <span>class <span class="ident">Pipeline</span></span>
+<span>(</span><span>add_preprocessing: bool = True)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Initializes the pipeline, including some preliminary
-common data preprocessing.</p></div>
+common data preprocessing if <code>add_preprocessing == True</code>.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Pipeline:
-    def __init__(self) -&gt; None:
+    def __init__(self, add_preprocessing: bool = True) -&gt; None:
         &#34;&#34;&#34;
         Initializes the pipeline, including some preliminary
-        common data preprocessing.
+        common data preprocessing if `add_preprocessing == True`.
         &#34;&#34;&#34;
         self.steps: t.List[PrimitiveStep] = []
-        self.add_step(RandomImputer)
-        self.add_step(OneHotEncoder)
+        if add_preprocessing:
+            self.add_step(RandomImputer)
+            self.add_step(OneHotEncoder)
 
     @property
     def curr_step_i(self) -&gt; int:
