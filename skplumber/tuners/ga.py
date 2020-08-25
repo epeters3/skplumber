@@ -123,8 +123,8 @@ def ga_tune(
         nonlocal n_evals
 
         try:
-            score = evaluator(pipeline, X, y, metric)
             pipeline.set_params(params)
+            score = evaluator(pipeline, X, y, metric)
         except PipelineRunError as e:
             logger.exception(e)
             if exit_on_pipeline_error:
